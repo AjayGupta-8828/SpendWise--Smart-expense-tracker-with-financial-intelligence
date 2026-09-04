@@ -1,7 +1,7 @@
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 
-from Expense_tracker.Expense_tracker import settings
+from django.conf import settings
 
 
 def send_welcome_email(user_email, user_name):
