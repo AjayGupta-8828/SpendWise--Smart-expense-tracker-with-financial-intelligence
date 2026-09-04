@@ -1,3 +1,4 @@
+import random
 from urllib import request
 from django.utils import timezone
 from django.shortcuts import render,redirect
@@ -9,7 +10,9 @@ from django.http import HttpResponse
 from django.contrib import messages
 from .models import Transactions,Budget
 from django.db.models.functions import ExtractMonth
-from .emails import send_welcome_email
+from django.utils import timezone
+from datetime import timedelta
+from .emails import send_welcome_email, send_otp_email
 @login_required(login_url="/login/")
 @login_required(login_url="/login/")
 def mainpage(request):
@@ -281,10 +284,7 @@ def update_transaction(request,id):
         return redirect("/transactions/")
     return render(request,"expenses/update_transaction.html",{"task": queryset})
 
-import random
-from django.utils import timezone
-from datetime import timedelta
-from .emails import send_welcome_email, send_otp_email
+
 
 
 def register_user(request):
@@ -410,3 +410,50 @@ def login_user(request):
 def logout_user(request):
     logout(request)
     return redirect('/login/')
+
+login_required(login_url="/login/")
+def profile_view(request):
+    if request.method == "POST":
+        user = request.user
+        first_name = request.POST.get("first_name", "").strip()
+        last_name = request.POST.get("last_name", "").strip()
+        email = request.POST.get("email", "").strip()
+ 
+        if email and User.objects.filter(email=email).exclude(id=user.id).exists():
+            messages.error(request, "That email is already in use by another account")
+            return redirect("/profile/")
+ 
+        user.first_name = first_name
+        user.last_name = last_name
+        user.email = email
+        user.save()
+        messages.info(request, "Profile updated successfully")
+        return redirect("/profile/")
+ 
+    return render(request, "expenses/profile.html")
+ 
+ 
+@login_required(login_url="/login/")
+def change_password_view(request):
+    if request.method == "POST":
+        user = request.user
+        current_password = request.POST.get("current_password")
+        new_password = request.POST.get("new_password")
+        confirm_password = request.POST.get("confirm_password")
+ 
+        if not user.check_password(current_password):
+            messages.error(request, "Current password is incorrect")
+            return redirect("/profile/")
+ 
+        if not new_password or new_password != confirm_password:
+            messages.error(request, "New passwords do not match")
+            return redirect("/profile/")
+ 
+        user.set_password(new_password)
+        user.save()
+        # Re-authenticate so the user isn't logged out after changing their password
+        login(request, user,backend='django.contrib.auth.backends.ModelBackend')
+        messages.info(request, "Password updated successfully")
+        return redirect("/profile/")
+ 
+    return redirect("/profile/")
