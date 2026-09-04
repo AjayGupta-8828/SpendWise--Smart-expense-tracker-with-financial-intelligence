@@ -1,14 +1,8 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Add Transaction</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
-
+{% extends "expenses/base.html" %}
+{% block title %}
+Add Transaction
+{% endblock %}
+{% block extra_css %}
     <script>
       // Same theme key as the rest of the app, so dark mode stays in sync across pages.
       (function () {
@@ -257,11 +251,22 @@
       .btn-outline-secondary{ color: var(--btn-reset); border-color: var(--border); }
       .btn-outline-secondary:hover{ background: var(--btn-reset); border-color: var(--btn-reset); }
     </style>
-  </head>
-  <body>
+{% endblock %}
+{% block content %}
 
     <nav class="navbar d-flex align-items-center" id="mainNavbar">
-      <a class="navbar-brand" href="/tasks/"><i class="bi bi-list-ul"></i>All Transactions</a>
+      <button
+    type="button"
+    class="btn btn-outline-light btn-sm mobile-menu-btn me-2"
+    id="sidebarToggleBtn"
+    title="Open sidebar"
+    aria-label="Open sidebar">
+  <i class="bi bi-list"></i>
+</button>
+
+<a class="navbar-brand" href="{% url 'mainpage' %}">
+  <i class="bi bi-wallet2"></i> All Transactions
+</a>
 
       <div class="d-flex gap-2 ms-auto me-2">
         <a href="{% url 'mainpage' %}" class="btn btn-success btn-sm">
@@ -275,7 +280,6 @@
       <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="themeToggle" title="Toggle dark mode">
         <i class="bi bi-moon-stars"></i>
       </button>
-
       <form class="d-flex mb-0" role="search">
         {% if request.user.is_authenticated %}
           <a href='/logout/' class="btn btn-outline-secondary btn-sm">Logout</a>
@@ -357,7 +361,8 @@
       </div>
 
     </div>
-
+{% endblock %}
+    {% block extra_js %}
     <script>
       // ---- Dark mode toggle (persisted in localStorage, shared with other pages) ----
       const themeToggle = document.getElementById("themeToggle");
@@ -406,6 +411,4 @@
       categorySelect.addEventListener("change", updateCategoryDot);
       updateCategoryDot();
     </script>
-
-  </body>
-</html>
+{% endblock %}
