@@ -1,6 +1,9 @@
-<!doctype html>
-<html lang="en">
-  <head>
+{% extends "expenses/base.html" %}
+{% block title %}
+Dashboard | Expense Tracker
+{% endblock %}
+
+  {% block extra_css %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Expense Tracker</title>
@@ -16,6 +19,16 @@
         var saved = localStorage.getItem("expenseTrackerTheme");
         if (saved === "dark") {
           document.documentElement.setAttribute("data-theme", "dark");
+        }
+
+        // Apply saved sidebar state immediately too, so it never "flashes" open
+        // then slides shut (or vice versa) after the page has already painted.
+        var savedSidebar = localStorage.getItem("expenseTrackerSidebar");
+        var shouldBeClosed = savedSidebar
+          ? savedSidebar === "closed"
+          : true; // overlay drawer — starts closed until the user opens it
+        if (shouldBeClosed) {
+          document.documentElement.setAttribute("data-sidebar", "closed");
         }
       })();
     </script>
@@ -62,6 +75,10 @@
         --radius: 10px;
         --shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
         --shadow-hover: 0 14px 34px rgba(0, 0, 0, 0.10);
+
+        /* Sidebar width lives in one place so every rule below (and the JS toggle)
+           stays in sync automatically. */
+        --sidebar-w: 230px;
       }
 
       [data-theme="dark"]{
@@ -137,7 +154,7 @@
         top: 0;
         z-index: 20;
         box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
-        transition: box-shadow .2s ease;
+        transition: box-shadow .2s ease, margin-left .32s cubic-bezier(.4,0,.2,1);
       }
       .navbar.scrolled{
         box-shadow: 0 4px 16px rgba(30, 41, 59, 0.18);
@@ -684,29 +701,62 @@
       }
       .toast-item.leaving{ animation: toastOut .2s ease forwards; }
     </style>
-  </head>
-  <body>
+ {% endblock %}
 
+{% block content %}
     <nav class="navbar d-flex align-items-center" id="mainNavbar">
-      <a class="navbar-brand" href="/tasks/"><i class="bi bi-wallet2"></i>Expense Tracker</a>
 
-      <a href="/add_transaction/" class="btn btn-success btn-sm ms-auto me-2">
-        <i class="bi bi-plus-lg"></i> Add Transaction
-      </a>
+        <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm mobile-menu-btn me-2"
+            id="sidebarToggleBtn"
+            title="Open sidebar"
+            aria-label="Open sidebar">
+            <i class="bi bi-list"></i>
+        </button>
 
-      <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="themeToggle" title="Toggle dark mode">
-        <i class="bi bi-moon-stars"></i>
-      </button>
+        <a class="navbar-brand" href="/">
+            <i class="bi bi-wallet2"></i>
+            Expense Tracker
+        </a>
 
-      <form class="d-flex mb-0" role="search">
         {% if request.user.is_authenticated %}
-          <a href='/logout/' class="btn btn-outline-secondary btn-sm">Logout</a>
+
+            <a
+                href="/add_transaction/"
+                class="btn btn-success btn-sm ms-auto me-2">
+                <i class="bi bi-plus-lg"></i>
+                <span class="add-transaction-label"> Add Transaction</span>
+            </a>
+
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm me-2"
+                id="themeToggle"
+                title="Toggle dark mode"
+                aria-label="Toggle dark mode">
+                <i class="bi bi-moon-stars"></i>
+            </button>
+
+            <a href="/logout/" class="btn btn-outline-secondary btn-sm">
+                Logout
+            </a>
+
         {% else %}
-          <a href='/login/' class="btn btn-success btn-sm">Login</a>
+
+            <a href="/login/" class="btn btn-success btn-sm ms-auto">
+                Login
+            </a>
+
         {% endif %}
-      </form>
+
     </nav>
 
+    <!-- =========================================================
+         DJANGO TOAST MESSAGES
+         ========================================================= -->
+
+    
     <div class="toast-stack" id="toastStack"></div>
 
     {% if messages %}
@@ -997,7 +1047,8 @@
       </div>
 
     </div>
-
+    {% endblock %}
+{% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
       // ==========================================================================
@@ -1416,7 +1467,6 @@
         }
       });
     </script>
-
     <script>
       // Sticky navbar shadow only after scrolling
       const navbar = document.getElementById("mainNavbar");
@@ -1552,5 +1602,4 @@
       });
     </script>
 
-  </body>
-</html>
+{% endblock %}
