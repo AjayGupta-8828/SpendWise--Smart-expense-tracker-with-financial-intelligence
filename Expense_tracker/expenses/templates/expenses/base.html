@@ -609,6 +609,15 @@
 
             <li>
                 <a
+                    class="sidebar-link {% if request.path == '/financial-intelligence/' %}active{% endif %}"
+                    href="/financial-intelligence/">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Financial Intelligence</span>
+                </a>
+            </li>
+
+            <li>
+                <a
                     class="sidebar-link {% if request.path == '/profile/' %}active{% endif %}"
                     href="/profile/">
                     <i class="bi bi-person"></i>
