@@ -39,6 +39,7 @@ urlpatterns = [
     path('resend-otp/', resend_otp, name='resend_otp'),
     path("profile/",profile_view,name="profile"),
     path("profile/change-password/",change_password_view,name="change_password"),
+    path('export/csv/',export_transactions_csv, name='export_transactions_csv'),
 ]
 
 if settings.DEBUG:

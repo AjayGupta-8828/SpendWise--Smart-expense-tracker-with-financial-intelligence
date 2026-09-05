@@ -700,6 +700,66 @@ Dashboard | Expense Tracker
         to{ opacity: 0; transform: translateX(20px); }
       }
       .toast-item.leaving{ animation: toastOut .2s ease forwards; }
+
+      /* ---------- CSV export ---------- */
+      .export-menu .export-trigger{
+        color: #fff;
+        border-color: rgba(255,255,255,.55);
+        background: rgba(255,255,255,.08);
+      }
+      .export-menu .export-trigger:hover,
+      .export-menu .export-trigger:focus{
+        color: #fff;
+        border-color: #fff;
+        background: rgba(255,255,255,.18);
+      }
+      .export-menu .dropdown-menu{
+        min-width: 12rem;
+        padding: .4rem;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 9px;
+        box-shadow: var(--shadow-hover);
+      }
+      .export-menu .dropdown-item{
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+        border-radius: 6px;
+        color: var(--text);
+        font-size: .76rem;
+        padding: .45rem .55rem;
+      }
+      .export-menu .dropdown-item:hover,
+      .export-menu .dropdown-item:focus{
+        background: var(--table-hover);
+        color: var(--text);
+      }
+      .export-menu .dropdown-divider{ border-color: var(--border); }
+
+      .export-modal .modal-content{
+        background: var(--card);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-hover);
+      }
+      .export-modal .modal-header,
+      .export-modal .modal-footer{ border-color: var(--border); }
+      .export-modal .modal-title{
+        font-family: "Poppins", sans-serif;
+        font-size: .95rem;
+        font-weight: 600;
+      }
+      .export-modal .modal-title i{ color: var(--primary); }
+      .export-modal .modal-body{ padding: 1rem 1.1rem; }
+      .export-modal .form-label{
+        color: var(--text);
+        font-size: .76rem;
+        margin-bottom: .35rem;
+      }
+      .export-modal .btn-close{ filter: none; }
+      [data-theme="dark"] .export-modal .btn-close{ filter: invert(1) grayscale(1) brightness(2); }
     </style>
  {% endblock %}
 
@@ -728,7 +788,23 @@ Dashboard | Expense Tracker
                 <i class="bi bi-plus-lg"></i>
                 <span class="add-transaction-label"> Add Transaction</span>
             </a>
-
+            <div class="dropdown export-menu ms-auto me-2">
+  <button class="btn export-trigger btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    <i class="bi bi-download"></i> Export Excel
+  </button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="{% url 'export_transactions_csv' %}?preset=today"><i class="bi bi-calendar-event"></i> Today</a></li>
+    <li><a class="dropdown-item" href="{% url 'export_transactions_csv' %}?preset=yesterday"><i class="bi bi-calendar-minus"></i> Yesterday</a></li>
+    <li><a class="dropdown-item" href="{% url 'export_transactions_csv' %}?preset=current_month"><i class="bi bi-calendar-month"></i> Current month</a></li>
+    <li><a class="dropdown-item" href="{% url 'export_transactions_csv' %}?preset=last_month"><i class="bi bi-calendar-range"></i> Last month</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li>
+      <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#customExportModal">
+        <i class="bi bi-sliders"></i> Custom range
+      </a>
+    </li>
+  </ul>
+</div>
             <button
                 type="button"
                 class="btn btn-outline-secondary btn-sm me-2"
@@ -737,10 +813,6 @@ Dashboard | Expense Tracker
                 aria-label="Toggle dark mode">
                 <i class="bi bi-moon-stars"></i>
             </button>
-
-            <a href="/logout/" class="btn btn-outline-secondary btn-sm">
-                Logout
-            </a>
 
         {% else %}
 
@@ -1047,6 +1119,67 @@ Dashboard | Expense Tracker
       </div>
 
     </div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<div class="modal fade export-modal" id="customExportModal" tabindex="-1" aria-labelledby="customExportModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="get" action="{% url 'export_transactions_csv' %}">
+        <input type="hidden" name="preset" value="custom">
+
+        <div class="modal-header">
+          <h5 class="modal-title" id="customExportModalLabel"><i class="bi bi-calendar3"></i> Custom Excel export</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold" for="customTypeSelect">Choose a date range</label>
+            <select class="form-select" id="customTypeSelect" name="custom_type" onchange="toggleCustomFields()">
+              <option value="month">A specific month</option>
+              <option value="date">A specific date</option>
+              <option value="range">Start date → End date</option>
+            </select>
+          </div>
+
+          <div id="fieldMonth" class="custom-field mb-3">
+            <label class="form-label">Month</label>
+            <input type="month" class="form-control" name="month">
+          </div>
+
+          <div id="fieldDate" class="custom-field mb-3" style="display:none;">
+            <label class="form-label">Date</label>
+            <input type="date" class="form-control" name="date">
+          </div>
+
+          <div id="fieldRange" class="custom-field mb-3" style="display:none;">
+            <label class="form-label">Start date</label>
+            <input type="date" class="form-control mb-2" name="start">
+            <label class="form-label">End date</label>
+            <input type="date" class="form-control" name="end">
+          </div>
+
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success btn-sm">
+            <i class="bi bi-download"></i> Export
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleCustomFields() {
+    const type = document.getElementById('customTypeSelect').value;
+    document.getElementById('fieldMonth').style.display = type === 'month' ? 'block' : 'none';
+    document.getElementById('fieldDate').style.display = type === 'date' ? 'block' : 'none';
+    document.getElementById('fieldRange').style.display = type === 'range' ? 'block' : 'none';
+  }
+</script>
     {% endblock %}
 {% block extra_js %}
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

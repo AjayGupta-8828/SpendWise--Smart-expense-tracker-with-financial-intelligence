@@ -457,3 +457,113 @@ def change_password_view(request):
         return redirect("/profile/")
  
     return redirect("/profile/")
+
+from io import BytesIO
+from datetime import timedelta
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+
+@login_required(login_url="/login/")
+def export_transactions_csv(request):
+    transactions = Transactions.objects.filter(user=request.user)
+
+    preset = request.GET.get('preset', 'current_month')
+    today = timezone.now().date()
+    label = "export"
+
+    if preset == 'today':
+        transactions = transactions.filter(date=today)
+        label = str(today)
+
+    elif preset == 'yesterday':
+        yesterday = today - timedelta(days=1)
+        transactions = transactions.filter(date=yesterday)
+        label = str(yesterday)
+
+    elif preset == 'current_month':
+        transactions = transactions.filter(date__year=today.year, date__month=today.month)
+        label = today.strftime('%Y-%m')
+
+    elif preset == 'last_month':
+        first_of_this_month = today.replace(day=1)
+        last_month_end = first_of_this_month - timedelta(days=1)
+        transactions = transactions.filter(date__year=last_month_end.year, date__month=last_month_end.month)
+        label = last_month_end.strftime('%Y-%m')
+
+    elif preset == 'custom':
+        custom_type = request.GET.get('custom_type')
+
+        if custom_type == 'month':
+            month_value = request.GET.get('month')  # "YYYY-MM" from <input type="month">
+            if month_value:
+                year, month = map(int, month_value.split('-'))
+                transactions = transactions.filter(date__year=year, date__month=month)
+                label = month_value
+
+        elif custom_type == 'date':
+            date_value = request.GET.get('date')
+            if date_value:
+                transactions = transactions.filter(date=date_value)
+                label = date_value
+
+        elif custom_type == 'range':
+            start_date = request.GET.get('start')
+            end_date = request.GET.get('end')
+            if start_date:
+                transactions = transactions.filter(date__gte=start_date)
+            if end_date:
+                transactions = transactions.filter(date__lte=end_date)
+            label = f"{start_date or 'start'}_to_{end_date or 'end'}"
+
+    transactions = transactions.order_by('date')
+
+    filename = f"spendwise_{request.user.username}_{label}.xlsx"
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Transactions"
+    worksheet.freeze_panes = "A2"
+    worksheet.sheet_view.showGridLines = False
+
+    header_fill = PatternFill("solid", fgColor="2563EB")
+    header_font = Font(color="FFFFFF", bold=True)
+    alternate_fill = PatternFill("solid", fgColor="F8FAFC")
+    border = Border(bottom=Side(style="thin", color="E2E8F0"))
+
+    worksheet.append(['Date', 'Title', 'Type', 'Category', 'Amount', 'Created At'])
+    for cell in worksheet[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    for row_number, txn in enumerate(transactions, start=2):
+        worksheet.append([
+            txn.date,
+            txn.title,
+            txn.types,
+            txn.category,
+            txn.amount,
+            timezone.localtime(txn.created_at).replace(tzinfo=None),
+        ])
+        for cell in worksheet[row_number]:
+            cell.border = border
+            cell.alignment = Alignment(vertical="center")
+            if row_number % 2 == 0:
+                cell.fill = alternate_fill
+        worksheet.cell(row=row_number, column=1).number_format = "yyyy-mm-dd"
+        worksheet.cell(row=row_number, column=5).number_format = '₹#,##0.00'
+        worksheet.cell(row=row_number, column=6).number_format = "yyyy-mm-dd hh:mm"
+
+    for column, width in {"A": 14, "B": 28, "C": 14, "D": 18, "E": 16, "F": 22}.items():
+        worksheet.column_dimensions[column].width = width
+
+    worksheet.auto_filter.ref = worksheet.dimensions
+    worksheet.row_dimensions[1].height = 23
+
+    output = BytesIO()
+    workbook.save(output)
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
