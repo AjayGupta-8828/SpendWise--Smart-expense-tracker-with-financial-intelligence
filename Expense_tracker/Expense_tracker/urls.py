@@ -40,6 +40,7 @@ urlpatterns = [
     path("profile/",profile_view,name="profile"),
     path("profile/change-password/",change_password_view,name="change_password"),
     path('export/csv/',export_transactions_csv, name='export_transactions_csv'),
+    path('financial-intelligence/', include('financial_ai.urls')),
 ]
 
 if settings.DEBUG:
