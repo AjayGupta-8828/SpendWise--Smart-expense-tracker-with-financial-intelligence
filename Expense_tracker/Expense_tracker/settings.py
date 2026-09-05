@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
     "expenses",
+    "financial_ai",
 ]
 
 MIDDLEWARE = [
@@ -142,3 +143,7 @@ EMAIL_HOST_USER="apikey"
 EMAIL_HOST_PASSWORD=config("SENDGRID_API_KEY")
 DEFAULT_FROM_EMAIL=config("Email")
 SOCIALACCOUNT_LOGIN_ON_GET = True # To skip the default confirmation page and redirect to google email login dashboard
+
+# Groq is optional. The Financial Intelligence page uses rule-based insights
+# when this key is not configured or the API is unavailable.
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
