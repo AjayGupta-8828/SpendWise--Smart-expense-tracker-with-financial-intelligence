@@ -1,0 +1,63 @@
+{% extends "expenses/base.html" %}
+
+{% block title %}Financial Intelligence | Expense Tracker{% endblock %}
+
+{% block extra_css %}
+<style>
+    .intelligence-page { max-width: 1180px; margin: 0 auto; }
+    .intelligence-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
+    .intelligence-header h1 { font-size:1.35rem; margin:0 0 .2rem; }
+    .intelligence-header p, .muted { color:var(--text-muted); margin:0; font-size:.78rem; }
+    .intelligence-card { height:100%; }
+    .intelligence-card .card-body { padding:1rem; }
+    .score-card { text-align:center; border-top:4px solid var(--primary); }
+    .score-number { font:700 3rem/1 "Poppins",sans-serif; color:var(--primary); }
+    .score-label { font-weight:700; margin:.3rem 0; }
+    .score-parts { display:grid; grid-template-columns:repeat(2,1fr); gap:.65rem; }
+    .score-part { background:var(--table-header); padding:.65rem; border-radius:8px; }
+    .score-part strong { display:block; font-size:1.1rem; color:var(--primary); }
+    .section-heading { font:600 .95rem "Poppins",sans-serif; margin:0 0 .8rem; }
+    .insight { display:flex; gap:.65rem; padding:.7rem 0; border-bottom:1px solid var(--border); }
+    .insight:last-child { border-bottom:0; padding-bottom:0; }
+    .insight-icon { width:30px; height:30px; flex:0 0 30px; border-radius:50%; display:grid; place-items:center; background:var(--table-hover); color:var(--primary); }
+    .insight.warning .insight-icon { color:#DC2626; } .insight.positive .insight-icon { color:#16A34A; }
+    .insight h6 { margin:0 0 .1rem; font-size:.8rem; } .insight p { margin:0; font-size:.74rem; color:var(--text-muted); }
+    .metric-value { font:700 1.05rem "Poppins",sans-serif; margin-top:.15rem; }
+    .readiness-state { color:var(--primary); font-weight:700; }
+    .requirement { display:flex; gap:.5rem; align-items:center; font-size:.77rem; margin:.55rem 0; }
+    .requirement i { font-size:1rem; } .requirement.met i { color:#16A34A; } .requirement:not(.met) i { color:#F59E0B; }
+    .suggestion { border-left:3px solid var(--primary); padding-left:.7rem; margin:.8rem 0; }
+    .suggestion h6 { margin:0 0 .15rem; font-size:.82rem; } .suggestion p { margin:0; color:var(--text-muted); font-size:.74rem; }
+    .disclaimer { font-size:.7rem; color:var(--text-muted); }
+    @media(max-width:600px) { .intelligence-header { display:block; } .intelligence-header .badge { margin-top:.6rem; } .score-parts { grid-template-columns:1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="page-wrap intelligence-page">
+    <div class="intelligence-header">
+        <div><h1><i class="bi bi-graph-up-arrow"></i> Financial Intelligence</h1><p>Your {{ metrics.month_name }} financial picture, based on the transactions you recorded.</p></div>
+        <span class="badge text-bg-primary">{{ metrics.month_name }}</span>
+    </div>
+
+    {% if not metrics.has_data %}
+    <div class="card mb-3"><div class="card-body text-center py-4"><i class="bi bi-wallet2 fs-2 text-muted"></i><h5 class="mt-2">No transactions yet</h5><p class="muted mb-3">Add your income and expenses to unlock a data-backed financial overview.</p><a href="/add_transaction/" class="btn btn-primary btn-sm">Add Transaction</a></div></div>
+    {% else %}
+    <div class="row g-3 mb-3">
+        <div class="col-lg-5"><section class="card intelligence-card score-card"><div class="card-body"><div class="muted text-uppercase">Financial health score</div><div class="score-number">{{ metrics.score }}</div><div class="score-label">{{ metrics.label }}</div><div class="progress mt-3" role="progressbar" aria-label="Financial health score"><div class="progress-bar" style="width: {{ metrics.score }}%"></div></div></div></section></div>
+        <div class="col-lg-7"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Score breakdown</h2><div class="score-parts"><div class="score-part"><span class="muted">Savings ratio</span><strong>{{ metrics.savings_score }}/30</strong></div><div class="score-part"><span class="muted">Expense control</span><strong>{{ metrics.expense_score }}/25</strong></div><div class="score-part"><span class="muted">Budget adherence</span><strong>{{ metrics.budget_score }}/25</strong></div><div class="score-part"><span class="muted">Overspending control</span><strong>{{ metrics.overspending_score }}/20</strong></div></div>{% if not metrics.budget_count %}<p class="muted mt-3">Add budgets to include budget adherence and overspending control in your score.</p>{% endif %}</div></section></div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Smart insights</h2>{% for insight in insights %}<div class="insight {{ insight.insight_type }}"><div class="insight-icon"><i class="bi {% if insight.insight_type == 'positive' %}bi-check-circle{% elif insight.insight_type == 'warning' %}bi-exclamation-triangle{% else %}bi-lightbulb{% endif %}"></i></div><div><h6>{{ insight.title }}</h6><p>{{ insight.message }}</p></div></div>{% endfor %}</div></section></div>
+        <div class="col-lg-5"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Monthly summary</h2><div class="row g-3"><div class="col-6"><div class="muted">Income</div><div class="metric-value text-success">₹{{ metrics.income|floatformat:0 }}</div></div><div class="col-6"><div class="muted">Expenses</div><div class="metric-value text-danger">₹{{ metrics.expenses|floatformat:0 }}</div></div><div class="col-6"><div class="muted">Savings</div><div class="metric-value">₹{{ metrics.savings|floatformat:0 }}</div></div><div class="col-6"><div class="muted">Top category</div><div class="metric-value">{% if metrics.highest_category %}{{ metrics.highest_category.category }}{% else %}—{% endif %}</div></div></div>{% if metrics.expensive_day %}<p class="muted mt-3">Highest-spending day: {{ metrics.expensive_day.date }} (₹{{ metrics.expensive_day.total|floatformat:0 }})</p>{% endif %}</div></section></div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-6"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Investment readiness</h2><div class="d-flex justify-content-between align-items-center"><span class="readiness-state">{{ readiness.state }}</span><strong>{{ readiness.score }}%</strong></div><div class="progress mt-2 mb-3"><div class="progress-bar" style="width:{{ readiness.score }}%"></div></div>{% for label, met in readiness.requirements %}<div class="requirement {% if met %}met{% endif %}"><i class="bi {% if met %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ label }}</span></div>{% endfor %}</div></section></div>
+        <div class="col-lg-6"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Smart investment suggestions</h2>{% if readiness.unlocked %}{% for title, message in suggestions %}<div class="suggestion"><h6>{{ title }}</h6><p>{{ message }}</p></div>{% endfor %}{% else %}<p class="muted">Suggestions unlock when you meet the readiness requirements. Build a positive surplus, keep expenses manageable, and stay within budget limits first.</p>{% endif %}</div></section></div>
+    </div>
+    {% endif %}
+    <p class="disclaimer"><i class="bi bi-info-circle"></i> Educational information only, not investment, tax, or financial advice. No investment recommendations or market data are provided.</p>
+</main>
+{% endblock %}
