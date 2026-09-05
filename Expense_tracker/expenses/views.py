@@ -13,6 +13,7 @@ from django.db.models.functions import ExtractMonth
 from django.utils import timezone
 from datetime import timedelta
 from .emails import send_welcome_email, send_otp_email
+from financial_ai.services import calculate_financial_health
 @login_required(login_url="/login/")
 @login_required(login_url="/login/")
 def mainpage(request):
@@ -169,6 +170,8 @@ def mainpage(request):
     for item in expense_queryset:
         expense_data[item["month"] - 1] = float(item["total"])
 
+    health_preview = calculate_financial_health(request.user)
+
     return render(
         request,
         "expenses/mainpage.html",
@@ -185,6 +188,7 @@ def mainpage(request):
             "months": months,
             "income_data": income_data,
             "expense_data": expense_data,
+            "health_preview": health_preview,
         },
     )
 def budget_tracker(request):
