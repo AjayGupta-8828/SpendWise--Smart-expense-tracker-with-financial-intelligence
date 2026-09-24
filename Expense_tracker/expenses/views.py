@@ -314,19 +314,15 @@ def register_user(request):
         )
         user.is_active = False
         user.save()
-
         # Generate 6-digit OTP
         otp_code = str(random.randint(100000, 999999))
-
         # Store in session
         request.session['pending_user_id'] = user.id
         request.session['otp_code'] = otp_code
         request.session['otp_created_at'] = timezone.now().isoformat()
 
         send_otp_email(email, first_name, otp_code)
-
         return redirect('/verify-otp/')
-
     return render(request, "expenses/register.html")
 
 
