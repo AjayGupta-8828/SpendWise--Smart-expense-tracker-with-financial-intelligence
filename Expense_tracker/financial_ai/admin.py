@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import FinancialHealthScore, FinancialInsight
+from .models import FinancialAiState, FinancialHealthScore, FinancialInsight
 
 
 @admin.register(FinancialHealthScore)
@@ -15,3 +15,9 @@ class FinancialInsightAdmin(admin.ModelAdmin):
     list_display = ("user", "title", "insight_type", "is_read", "created_at")
     list_filter = ("insight_type", "is_read")
     search_fields = ("user__username", "title")
+
+
+@admin.register(FinancialAiState)
+class FinancialAiStateAdmin(admin.ModelAdmin):
+    list_display = ("user", "updates_since_ai", "updated_at")
+    search_fields = ("user__username",)
