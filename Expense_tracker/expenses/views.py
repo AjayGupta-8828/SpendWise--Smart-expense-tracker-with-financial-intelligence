@@ -182,6 +182,7 @@ def mainpage(request):
             "number_of_transactions": number_of_transactions,
             "queryset": queryset,
             "expenseData": expenseData,
+            
             "budget_data": budget_data,
 
             # Bar Chart
