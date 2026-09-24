@@ -61,7 +61,29 @@ class FinancialHealthServiceTests(TestCase):
         response = self.client.get("/financial-intelligence/")
         self.assertRedirects(response, "/login/?next=/financial-intelligence/")
         self.client.force_login(self.user)
-        with patch("financial_ai.views.get_ai_insight", return_value="Your financial summary is ready."):
+        with patch("financial_ai.views.get_ai_financial_content", return_value=None):
             response = self.client.get("/financial-intelligence/")
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Financial Intelligence")
+
+    def test_ai_refreshes_after_three_financial_data_changes(self):
+        self.transaction("Income", "10000", "Salary")
+        self.transaction("Expense", "2000", "Food")
+        self.client.force_login(self.user)
+        ai_content = {
+            "summary": "Your summary was refreshed.",
+            "suggestions": [
+                {"title": "Fixed Deposits", "message": "Research lower-volatility saving options."},
+                {"title": "Government Securities", "message": "Research maturity and interest-rate risk."},
+                {"title": "Liquid Funds", "message": "Research liquidity and credit risk."},
+                {"title": "Gold ETFs", "message": "Research diversification and market risk."},
+                {"title": "Nifty 50 Index Funds", "message": "Research diversified equity exposure."},
+            ],
+        }
+        with patch("financial_ai.views.get_ai_financial_content", return_value=ai_content) as generate:
+            self.client.get("/financial-intelligence/")
+            for amount in ("100", "200", "300"):
+                self.transaction("Expense", amount, "Food")
+                self.client.get("/financial-intelligence/")
+
+        self.assertEqual(generate.call_count, 4)
