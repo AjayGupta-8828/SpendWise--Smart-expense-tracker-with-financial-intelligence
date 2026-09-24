@@ -35,3 +35,11 @@ class FinancialInsight(models.Model):
     class Meta:
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user", "created_at"])]
+
+
+class FinancialAiState(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    last_seen_signature = models.CharField(max_length=64, blank=True)
+    updates_since_ai = models.PositiveSmallIntegerField(default=0)
+    suggestions = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
