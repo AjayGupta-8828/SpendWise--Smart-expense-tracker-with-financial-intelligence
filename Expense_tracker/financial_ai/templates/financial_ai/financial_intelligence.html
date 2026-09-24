@@ -4,7 +4,9 @@
 
 {% block extra_css %}
 <style>
-    .intelligence-page { max-width: 1180px; margin: 0 auto; }
+    /* Keep this dashboard aligned with the main page instead of constraining
+       the cards to a narrow column in the middle of wide screens. */
+    .intelligence-page { width:100%; max-width:1475px; margin:0 auto; }
     .intelligence-header { display:flex; justify-content:space-between; gap:1rem; align-items:flex-start; margin-bottom:1rem; }
     .intelligence-header h1 { font-size:1.35rem; margin:0 0 .2rem; }
     .intelligence-header p, .muted { color:var(--text-muted); margin:0; font-size:.78rem; }
@@ -28,13 +30,50 @@
     .requirement i { font-size:1rem; } .requirement.met i { color:#16A34A; } .requirement:not(.met) i { color:#F59E0B; }
     .suggestion { border-left:3px solid var(--primary); padding-left:.7rem; margin:.8rem 0; }
     .suggestion h6 { margin:0 0 .15rem; font-size:.82rem; } .suggestion p { margin:0; color:var(--text-muted); font-size:.74rem; }
+    .suggestion-meta { display:flex; align-items:center; gap:.55rem; flex-wrap:wrap; margin-top:.45rem; }
+    .risk-badge { background:var(--table-header); color:var(--text-muted); border:1px solid var(--border); border-radius:999px; padding:.12rem .4rem; font-size:.64rem; }
+    .learn-link { font-size:.7rem; font-weight:600; }
+    .readiness-card, .suggestions-card { height:360px; }
+    .suggestions-card .card-body { display:flex; flex-direction:column; min-height:0; }
+    .suggestions-scroll { flex:1; overflow-y:auto; min-height:0; padding-right:.4rem; }
+    .suggestions-scroll::-webkit-scrollbar { width:6px; }
+    .suggestions-scroll::-webkit-scrollbar-thumb { background:var(--border); border-radius:999px; }
     .disclaimer { font-size:.7rem; color:var(--text-muted); }
     @media(max-width:600px) { .intelligence-header { display:block; } .intelligence-header .badge { margin-top:.6rem; } .score-parts { grid-template-columns:1fr; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="page-wrap intelligence-page">
+<nav class="navbar d-flex align-items-center" id="mainNavbar">
+    <button type="button" class="btn btn-outline-secondary btn-sm mobile-menu-btn me-2"
+            id="sidebarToggleBtn" title="Open sidebar" aria-label="Open sidebar">
+        <i class="bi bi-list"></i>
+    </button>
+
+    <a class="navbar-brand" href="/">
+        <i class="bi bi-wallet2"></i> Expense Tracker
+    </a>
+
+    <a href="/transactions/" class="btn btn-outline-secondary btn-sm ms-auto me-2">
+        <i class="bi bi-receipt"></i><span class="d-none d-sm-inline"> Transactions</span>
+    </a>
+    <button type="button" class="btn btn-outline-secondary btn-sm me-2" id="themeToggle"
+            title="Toggle dark mode" aria-label="Toggle dark mode">
+        <i class="bi bi-moon-stars"></i>
+    </button>
+    <a href="/profile/" class="btn btn-outline-secondary btn-sm me-2" title="Profile" aria-label="Profile">
+        <i class="bi bi-person"></i><span class="d-none d-sm-inline"> Profile</span>
+    </a>
+</nav>
+
+<div class="toast-stack" id="toastStack"></div>
+{% if messages %}
+<div id="djangoMessages" style="display:none;">
+    {% for message in messages %}<span data-tag="{{ message.tags }}">{{ message }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<div class="page-wrap intelligence-page">
     <div class="intelligence-header">
         <div><h1><i class="bi bi-graph-up-arrow"></i> Financial Intelligence</h1><p>Your {{ metrics.month_name }} financial picture, based on the transactions you recorded.</p></div>
         <span class="badge text-bg-primary">{{ metrics.month_name }}</span>
@@ -54,10 +93,10 @@
     </div>
 
     <div class="row g-3 mb-3">
-        <div class="col-lg-6"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Investment readiness</h2><div class="d-flex justify-content-between align-items-center"><span class="readiness-state">{{ readiness.state }}</span><strong>{{ readiness.score }}%</strong></div><div class="progress mt-2 mb-3"><div class="progress-bar" style="width:{{ readiness.score }}%"></div></div>{% for label, met in readiness.requirements %}<div class="requirement {% if met %}met{% endif %}"><i class="bi {% if met %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ label }}</span></div>{% endfor %}</div></section></div>
-        <div class="col-lg-6"><section class="card intelligence-card"><div class="card-body"><h2 class="section-heading">Smart investment suggestions</h2>{% if readiness.unlocked %}{% for title, message in suggestions %}<div class="suggestion"><h6>{{ title }}</h6><p>{{ message }}</p></div>{% endfor %}{% else %}<p class="muted">Suggestions unlock when you meet the readiness requirements. Build a positive surplus, keep expenses manageable, and stay within budget limits first.</p>{% endif %}</div></section></div>
+        <div class="col-lg-6"><section class="card intelligence-card readiness-card"><div class="card-body"><h2 class="section-heading">Investment readiness</h2><div class="d-flex justify-content-between align-items-center"><span class="readiness-state">{{ readiness.state }}</span><strong>{{ readiness.score }}%</strong></div><div class="progress mt-2 mb-3"><div class="progress-bar" style="width:{{ readiness.score }}%"></div></div>{% for label, met in readiness.requirements %}<div class="requirement {% if met %}met{% endif %}"><i class="bi {% if met %}bi-check-circle-fill{% else %}bi-circle{% endif %}"></i><span>{{ label }}</span></div>{% endfor %}</div></section></div>
+        <div class="col-lg-6"><section class="card intelligence-card suggestions-card"><div class="card-body"><div class="d-flex justify-content-between gap-2"><h2 class="section-heading">Smart investment suggestions</h2>{% if readiness.unlocked %}<span class="muted">Updates with your data</span>{% endif %}</div><div class="suggestions-scroll">{% if readiness.unlocked %}{% for suggestion in suggestions %}<div class="suggestion"><h6>{{ suggestion.title }}</h6><p>{{ suggestion.message }}</p>{% if suggestion.url %}<div class="suggestion-meta"><span class="risk-badge">{{ suggestion.risk }}</span><a class="learn-link" href="{{ suggestion.url }}" target="_blank" rel="noopener noreferrer">{{ suggestion.label }} <i class="bi bi-box-arrow-up-right"></i></a></div>{% endif %}</div>{% endfor %}{% else %}<p class="muted">Suggestions unlock when you meet the readiness requirements. Build a positive surplus, keep expenses manageable, and stay within budget limits first.</p>{% endif %}</div></div></section></div>
     </div>
     {% endif %}
     <p class="disclaimer"><i class="bi bi-info-circle"></i> Educational information only, not investment, tax, or financial advice. No investment recommendations or market data are provided.</p>
-</main>
+</div>
 {% endblock %}
