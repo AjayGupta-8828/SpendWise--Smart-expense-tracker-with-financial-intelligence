@@ -152,5 +152,17 @@ def rule_based_insights(metrics):
 
 def investment_suggestions(metrics):
     if metrics["score"] >= 85:
-        return [("Index Funds", "A diversified category for long-term learning."), ("Gold ETFs", "A category commonly used for diversification education."), ("Equity", "Higher-risk category to research after understanding its volatility.")]
-    return [("Fixed Deposits", "A lower-volatility category to learn about."), ("Government Securities", "A relatively conservative category for educational research."), ("Index Funds", "A diversified category to explore as your financial foundation grows.")]
+        return [
+            ("Nifty 50 Index Funds", "Learn how passive funds track a market index and how tracking error and costs affect outcomes."),
+            ("Diversified Equity Mutual Funds", "Explore diversification, risk levels, and time horizon before considering equity-based products."),
+            ("Gold ETFs", "Learn how exchange-traded funds work and how gold exposure can behave differently from equities."),
+            ("Government Securities", "Research interest-rate risk, maturity, and how government-issued securities work."),
+            ("Individual Equity Shares", "Study financial statements, diversification, and volatility before researching individual companies."),
+        ]
+    return [
+        ("Fixed Deposits", "Learn about tenure, liquidity, interest-rate terms, and deposit insurance limits."),
+        ("Government Securities", "Research government securities, maturity, and interest-rate risk before making decisions."),
+        ("Liquid Funds", "Learn about liquidity, credit risk, and why a fund is not the same as a savings account."),
+        ("Gold ETFs", "Explore ETF mechanics, costs, and how commodity exposure can fluctuate."),
+        ("Nifty 50 Index Funds", "Study passive investing, diversification, expense ratios, and tracking error."),
+    ]
