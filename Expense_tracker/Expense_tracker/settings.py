@@ -28,7 +28,7 @@ SECRET_KEY = config("Secret_key")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["spendwise-smart-expense-tracker-with.onrender.com","127.0.0.1"]
+ALLOWED_HOSTS = ["spendwise-smart-expense-tracker-with.onrender.com","127.0.0.1","spendwise-smart-expense-tracker.onrender.com"]
 
 
 # Application definition
