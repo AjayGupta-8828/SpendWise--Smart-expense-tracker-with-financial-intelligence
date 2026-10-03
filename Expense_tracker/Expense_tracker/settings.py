@@ -105,19 +105,6 @@ DATABASES = {
 
 SITE_ID = 1
 
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "APPS": [
-            {
-                "client_id": config("GOOGLE_CLIENT_ID"),
-                "secret": config("GOOGLE_CLIENT_SECRET"),
-                "key": "",
-            }
-        ],
-        "SCOPE": ["profile", "email"],
-        "AUTH_PARAMS": {"access_type": "online"},
-    }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
