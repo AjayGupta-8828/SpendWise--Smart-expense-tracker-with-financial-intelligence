@@ -18,6 +18,9 @@ from financial_ai.services import calculate_financial_health
 @login_required(login_url="/login/")
 def mainpage(request):
     today = timezone.now()
+    # This one-time flag is set after account verification.  Every later visit
+    # (including a normal sign-in) is treated as a returning visit.
+    is_new_user = request.session.pop("show_new_user_welcome", False)
 
     title = request.GET.get("search_text")
     date = request.GET.get("search_date")
@@ -190,6 +193,7 @@ def mainpage(request):
             "income_data": income_data,
             "expense_data": expense_data,
             "health_preview": health_preview,
+            "is_new_user": is_new_user,
         },
     )
 def budget_tracker(request):
@@ -322,7 +326,11 @@ def register_user(request):
         request.session['otp_code'] = otp_code
         request.session['otp_created_at'] = timezone.now().isoformat()
 
-        send_otp_email(email, first_name, otp_code)
+        if not send_otp_email(email, first_name, otp_code):
+            user.delete()
+            request.session.flush()
+            messages.error(request, "We could not send the verification email. Please try again.")
+            return redirect('/register/')
         return redirect('/verify-otp/')
     return render(request, "expenses/register.html")
 
@@ -360,7 +368,9 @@ def verify_otp(request):
             del request.session['otp_code']
             del request.session['otp_created_at']
 
-            messages.success(request, "Account verified successfully!")
+            request.session['show_new_user_welcome'] = True
+            display_name = user.first_name or user.username
+            messages.success(request, f"Welcome {display_name}! Your account is ready.")
             return redirect('/')
         else:
             messages.error(request, "Invalid OTP. Try again.")
@@ -380,8 +390,10 @@ def resend_otp(request):
     request.session['otp_code'] = otp_code
     request.session['otp_created_at'] = timezone.now().isoformat()
 
-    send_otp_email(user.email, user.first_name, otp_code)
-    messages.info(request, "A new OTP has been sent to your email.")
+    if send_otp_email(user.email, user.first_name, otp_code):
+        messages.info(request, "A new OTP has been sent to your email.")
+    else:
+        messages.error(request, "We could not send a new OTP. Please try again.")
     return redirect('/verify-otp/')
 
 def login_user(request):
@@ -394,16 +406,20 @@ def login_user(request):
             messages.error(request,"Invalid Username")
             return redirect('/login/')
         
+        existing_user = User.objects.get(username=username)
+        if not existing_user.is_active:
+            messages.error(request, "Please verify your email first.")
+            return redirect('/login/')
+
         user=authenticate(username=username,password=password)
 
         if user is None:
             messages.error(request,"Invalid Password")
             return redirect('/login/')
-        elif not user.is_active:
-            messages.error(request, "Please verify your email first.")
-            return redirect('/login/')
         else:
             login(request,user)
+            display_name = user.first_name or user.username
+            messages.success(request, f"Welcome back {display_name}!")
             return redirect("/")
 
     return render(request,"expenses/login.html")

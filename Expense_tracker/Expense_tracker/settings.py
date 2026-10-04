@@ -149,14 +149,9 @@ LOGIN_REDIRECT_URL = '/'
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-# mail settings(Gmail)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER="apikey"
-EMAIL_HOST_PASSWORD=config("SENDGRID_API_KEY")
-DEFAULT_FROM_EMAIL=config("Email")
+# SendGrid HTTP API settings. HTTPS avoids SMTP connection timeouts on Render.
+SENDGRID_API_KEY = config("SENDGRID_API_KEY", default="")
+DEFAULT_FROM_EMAIL = config("Email", default="")
 SOCIALACCOUNT_LOGIN_ON_GET = True # To skip the default confirmation page and redirect to google email login dashboard
 
 # Groq is optional. The Financial Intelligence page uses rule-based insights

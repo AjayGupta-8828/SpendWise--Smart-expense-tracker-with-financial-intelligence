@@ -1,7 +1,41 @@
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+import logging
 
+import requests
+from django.template.loader import render_to_string
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
+
+
+def _send_email(recipient, subject, text_content, html_content):
+    """Send mail through SendGrid's HTTPS API without blocking on SMTP."""
+    api_key = settings.SENDGRID_API_KEY
+    sender = settings.DEFAULT_FROM_EMAIL
+    if not api_key or not sender:
+        logger.error("Email was not sent: SendGrid configuration is incomplete.")
+        return False
+
+    payload = {
+        "personalizations": [{"to": [{"email": recipient}]}],
+        "from": {"email": sender},
+        "subject": subject,
+        "content": [
+            {"type": "text/plain", "value": text_content},
+            {"type": "text/html", "value": html_content},
+        ],
+    }
+    try:
+        response = requests.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={"Authorization": f"Bearer {api_key}"},
+            json=payload,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return True
+    except requests.RequestException as error:
+        logger.error("SendGrid email request failed: %s", error)
+        return False
 
 
 def send_welcome_email(user_email, user_name):
@@ -9,12 +43,9 @@ def send_welcome_email(user_email, user_name):
     text_content = f"Welcome, {user_name}! Thanks for signing up."
     html_content = render_to_string('emails/welcome.html', {
         'user_name': user_name,
-        'site_url': 'http://127.0.0.1:8000/',
+        'site_url': 'https://spendwise-smart-expense-tracker.onrender.com/',
     })
-
-    msg = EmailMultiAlternatives(subject, text_content, 'ajaylegend506@gmail.com', [user_email])
-    msg.attach_alternative(html_content, "text/html")
-    msg.send()
+    return _send_email(user_email, subject, text_content, html_content)
 
 
 def send_otp_email(user_email, user_name, otp_code):
@@ -25,6 +56,4 @@ def send_otp_email(user_email, user_name, otp_code):
         'otp_code': otp_code,
     })
 
-    msg = EmailMultiAlternatives(subject, text_content, settings.DEFAULT_FROM_EMAIL, [user_email])
-    msg.attach_alternative(html_content, "text/html")
-    msg.send()
+    return _send_email(user_email, subject, text_content, html_content)
