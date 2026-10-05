@@ -245,6 +245,16 @@ Add Transaction
         border-top: 1px solid var(--border);
       }
 
+      .transaction-toast-stack{ position:fixed; top:5.5rem; right:1rem; z-index:1080; width:min(360px,calc(100vw - 2rem)); }
+      .transaction-toast{ padding:.85rem 1rem; margin-bottom:.6rem; border-radius:10px; box-shadow:0 12px 28px rgba(15,23,42,.20); font-weight:600; animation:toastIn .25s ease; }
+      .transaction-toast.error{ background:#FEE2E2; border-left:4px solid #DC2626; color:#991B1B; }
+      .transaction-toast.warning{ background:#FEF3C7; border-left:4px solid #D97706; color:#92400E; }
+      .transaction-toast.success{ background:#DCFCE7; border-left:4px solid #16A34A; color:#166534; }
+      .transaction-toast.info{ background:#DBEAFE; border-left:4px solid #2563EB; color:#1E40AF; }
+      .transaction-toast.leaving{ animation:toastOut .2s ease forwards; }
+      @keyframes toastIn{ from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
+      @keyframes toastOut{ from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(24px)} }
+
       .btn{ border-radius: 8px; font-weight: 500; }
       .btn-primary{ background: var(--primary); border-color: var(--primary); }
       .btn-primary:hover{ background: #1D4ED8; border-color: #1D4ED8; }
@@ -339,15 +349,13 @@ Add Transaction
               </label>
               <select class="form-select" id="category" name="category" required>
                 <option value="Salary">Salary</option>
-                <option value="Food">Food</option>
-                <option value="Groceries">Groceries</option>
-                <option value="Travel">Travel</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Bills">Bills</option>
-                <option value="Entertainment">Entertainment</option>
                 <option value="Other">Other</option>
               </select>
             </div>
+          </div>
+          <div class="mb-field" id="customCategoryField" hidden>
+            <label class="form-label" for="custom_category">Custom income category</label>
+            <input type="text" class="form-control" id="custom_category" name="custom_category" maxlength="100" placeholder="e.g. Freelance work">
           </div>
 
           <div class="form-actions">
@@ -360,36 +368,20 @@ Add Transaction
         </form>
       </div>
 
+      {% if messages %}
+        <div class="transaction-toast-stack" aria-live="polite">
+          {% for message in messages %}
+            <div class="transaction-toast {% if 'error' in message.tags %}error{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}info{% endif %}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
     </div>
 {% endblock %}
     {% block extra_js %}
     <script>
-      // ---- Dark mode toggle (persisted in localStorage, shared with other pages) ----
-      const themeToggle = document.getElementById("themeToggle");
-      const themeIcon = themeToggle.querySelector("i");
-      function applyTheme(theme) {
-        if (theme === "dark") {
-          document.documentElement.setAttribute("data-theme", "dark");
-          themeIcon.className = "bi bi-sun";
-        } else {
-          document.documentElement.removeAttribute("data-theme");
-          themeIcon.className = "bi bi-moon-stars";
-        }
-      }
-      applyTheme(localStorage.getItem("expenseTrackerTheme") || "light");
-      themeToggle.addEventListener("click", function () {
-        const current = document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light";
-        const next = current === "dark" ? "light" : "dark";
-        applyTheme(next);
-        localStorage.setItem("expenseTrackerTheme", next);
-      });
-
-      // Sticky navbar shadow only after scrolling (matches mainpage behavior)
-      const navbar = document.getElementById("mainNavbar");
-      window.addEventListener("scroll", function () {
-        navbar.classList.toggle("scrolled", window.scrollY > 4);
-      });
-
       // Update the category color dot to match the selected category's fixed color,
       // consistent with the colors used in the mainpage's doughnut chart.
       const categoryColors = {
@@ -408,7 +400,31 @@ Add Transaction
       function updateCategoryDot() {
         categoryDot.style.background = categoryColors[categorySelect.value] || "var(--cat-other)";
       }
-      categorySelect.addEventListener("change", updateCategoryDot);
-      updateCategoryDot();
+      const typeSelect = document.getElementById("types");
+      const customCategoryField = document.getElementById("customCategoryField");
+      const customCategoryInput = document.getElementById("custom_category");
+      const categories = {
+        Income: ["Salary", "Other"],
+        Expense: ["Food", "Groceries", "Travel", "Shopping", "Bills", "Entertainment", "Other"]
+      };
+      function refreshCategories() {
+        const selected = categorySelect.value;
+        categorySelect.innerHTML = categories[typeSelect.value]
+          .map(category => `<option value="${category}">${category}</option>`).join("");
+        categorySelect.value = categories[typeSelect.value].includes(selected) ? selected : categories[typeSelect.value][0];
+        const isCustomIncome = typeSelect.value === "Income" && categorySelect.value === "Other";
+        customCategoryField.hidden = !isCustomIncome;
+        customCategoryInput.required = isCustomIncome;
+        updateCategoryDot();
+      }
+      typeSelect.addEventListener("change", refreshCategories);
+      categorySelect.addEventListener("change", refreshCategories);
+      refreshCategories();
+      document.querySelectorAll(".transaction-toast").forEach((toast) => {
+        setTimeout(() => {
+          toast.classList.add("leaving");
+          setTimeout(() => toast.remove(), 200);
+        }, 5000);
+      });
     </script>
 {% endblock %}
