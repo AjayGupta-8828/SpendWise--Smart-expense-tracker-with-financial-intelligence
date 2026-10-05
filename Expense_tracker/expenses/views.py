@@ -223,51 +223,27 @@ def mainpage(request):
     # ==========================
 
     income_queryset = (
-        Transactions.objects.filter(
-            user=request.user,
-            types="Income",
-            date__year=today.year
-        )
-        .annotate(month=ExtractMonth("date"))
-        .values("month")
-        .annotate(total=Sum("amount"))
-        .order_by("month")
+        Transactions.objects.filter(user=request.user, types="Income", date__year=today.year)
+        .annotate(month=ExtractMonth("date")).values("month").annotate(total=Sum("amount")).order_by("month")
     )
-
     expense_queryset = (
-        Transactions.objects.filter(
-            user=request.user,
-            types="Expense",
-            date__year=today.year
+        Transactions.objects.filter(user=request.user, types="Expense", date__year=today.year)
+        .annotate(month=ExtractMonth("date")).values("month").annotate(total=Sum("amount")).order_by("month")
+    )
+    months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    income_data = [0] * 12
+    expense_data = [0] * 12
+    for item in income_queryset:
+        income_data[item["month"] - 1] = float(item["total"])
+    for item in expense_queryset:
+        expense_data[item["month"] - 1] = float(item["total"])
+
+    health_preview = calculate_financial_health(request.user)
     edit_budget = None
     if request.GET.get("edit_budget"):
         edit_budget = get_object_or_404(
             Budget, user=request.user, pk=request.GET["edit_budget"]
         )
-        )
-        .annotate(month=ExtractMonth("date"))
-        .values("month")
-        .annotate(total=Sum("amount"))
-        .order_by("month")
-    )
-
-    months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ]
-
-    income_data = [0] * 12
-    expense_data = [0] * 12
-
-    for item in income_queryset:
-        income_data[item["month"] - 1] = float(item["total"])
-
-    for item in expense_queryset:
-        expense_data[item["month"] - 1] = float(item["total"])
-            "edit_budget": edit_budget,
-
-    health_preview = calculate_financial_health(request.user)
-@login_required(login_url="/login/")
 
     return render(
         request,
@@ -288,6 +264,7 @@ def mainpage(request):
             "expense_data": expense_data,
             "health_preview": health_preview,
             "is_new_user": is_new_user,
+            "edit_budget": edit_budget,
         },
     )
 @login_required(login_url="/login/")
@@ -296,13 +273,6 @@ def budget_tracker(request):
         category=request.POST.get("category")
         limit=request.POST.get("limit")
         if category not in EXPENSE_CATEGORIES:
-        try:
-            limit = Decimal(limit)
-            if limit <= 0:
-                raise InvalidOperation
-        except (InvalidOperation, TypeError):
-            messages.error(request, "Enter a budget limit greater than zero.")
-            return redirect(f"/?edit_budget={id}")
             messages.error(request, "Choose a valid expense category for the budget.")
         else:
             try:
@@ -320,11 +290,19 @@ def budget_tracker(request):
         return redirect("/")
     return redirect("/?modal=budget")
 
+@login_required(login_url="/login/")
 def update_budget(request,id):
     budget = get_object_or_404(Budget, user=request.user, id=id)
     if request.method=="POST":
         
         limit=request.POST.get("limit")
+        try:
+            limit = Decimal(limit)
+            if limit <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, TypeError):
+            messages.error(request, "Enter a budget limit greater than zero.")
+            return redirect(f"/?edit_budget={id}")
         budget.limit = limit
         budget.save()
         messages.info(request,"Budget updated successfully")
@@ -343,15 +321,10 @@ def add_transaction(request):
             messages.error(request, error)
             return redirect("/?modal=transaction")
         budget_alert = _budget_crossing(request.user, values)
-    edit_transaction = None
-    if request.GET.get("edit_transaction"):
-        edit_transaction = get_object_or_404(
-            Transactions, user=request.user, pk=request.GET["edit_transaction"]
-        )
         Transactions.objects.create(user=request.user, **values)
         if budget_alert:
             budget, spent = budget_alert
-            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ???{spent:.2f}.")
+            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ₹{spent:.2f}.")
             if request.user.email:
                 db_transaction.on_commit(lambda: send_budget_alert_email(
                     request.user.email, request.user.first_name or request.user.username,
@@ -362,7 +335,6 @@ def add_transaction(request):
 
     return redirect("/?modal=transaction")
 
-@login_required(login_url="/login/")
 # Create your views here.
 
 
@@ -371,6 +343,11 @@ def transaction(request):
     transactions = Transactions.objects.filter(
         user=request.user
     )
+    edit_transaction = None
+    if request.GET.get("edit_transaction"):
+        edit_transaction = get_object_or_404(
+            Transactions, user=request.user, pk=request.GET["edit_transaction"]
+        )
 
     return render(
         request,
@@ -385,6 +362,7 @@ def delete_transaction(request,id):
     queryset.delete()
     return redirect("/transactions/")
 
+@login_required(login_url="/login/")
 def update_transaction(request,id):
     queryset = get_object_or_404(Transactions, user=request.user, id=id)
     if request.method == "POST":
@@ -406,7 +384,7 @@ def update_transaction(request,id):
         queryset.save()
         if budget_alert:
             budget, spent = budget_alert
-            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ???{spent:.2f}.")
+            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ₹{spent:.2f}.")
             if request.user.email:
                 db_transaction.on_commit(lambda: send_budget_alert_email(
                     request.user.email, request.user.first_name or request.user.username,
@@ -551,10 +529,52 @@ def logout_user(request):
     logout(request)
     return redirect('/login/')
 
-login_required(login_url="/login/")
+PROFILE_OTP_LIFETIME = timedelta(minutes=10)
+
+
+def _begin_profile_change_otp(request, change):
+    """Send and store an OTP for a pending sensitive profile change."""
+    otp_code = f"{secrets.randbelow(1_000_000):06d}"
+    if not send_otp_email(change["email"], request.user.first_name or request.user.username, otp_code):
+        return False
+    request.session["profile_change"] = change
+    request.session["profile_change_otp"] = otp_code
+    request.session["profile_change_otp_created_at"] = timezone.now().isoformat()
+    return True
+
+
+def _clear_profile_change_otp(request):
+    for key in ("profile_change", "profile_change_otp", "profile_change_otp_created_at"):
+        request.session.pop(key, None)
+
+
+def _social_profile_email(user):
+    """Return the email supplied by allauth when User.email is blank."""
+    if user.email:
+        return user.email
+    verified_email = (
+        EmailAddress.objects.filter(user=user, verified=True)
+        .order_by("-primary", "id").values_list("email", flat=True).first()
+    )
+    if verified_email:
+        return verified_email
+    for account in SocialAccount.objects.filter(user=user):
+        email = account.extra_data.get("email")
+        if email:
+            return email
+    return ""
+
+
+def _is_social_only_user(user):
+    return SocialAccount.objects.filter(user=user).exists() and not user.has_usable_password()
+
+
+@login_required(login_url="/login/")
 def profile_view(request):
+    user = request.user
+    profile_email = _social_profile_email(user)
+    is_social_only = _is_social_only_user(user)
     if request.method == "POST":
-        user = request.user
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
         email = request.POST.get("email", "").strip()
@@ -562,21 +582,49 @@ def profile_view(request):
         if email and User.objects.filter(email=email).exclude(id=user.id).exists():
             messages.error(request, "That email is already in use by another account")
             return redirect("/profile/")
- 
+
+        if email and EmailAddress.objects.filter(email__iexact=email).exclude(user=user).exists():
+            messages.error(request, "That email is already in use by another account")
+            return redirect("/profile/")
+
+        if is_social_only and email != profile_email:
+            messages.error(request, "Your email is managed by your social login provider.")
+            return redirect("/profile/")
+
+        if email != profile_email:
+            if not email:
+                messages.error(request, "Enter an email address to verify this change.")
+                return redirect("/profile/")
+            change = {
+                "user_id": user.id, "kind": "email", "email": email,
+                "first_name": first_name, "last_name": last_name,
+            }
+            if not _begin_profile_change_otp(request, change):
+                messages.error(request, "We could not send a verification code. Your profile was not changed.")
+                return redirect("/profile/")
+            messages.info(request, "Enter the verification code sent to your new email address.")
+            return redirect("/profile/verify-otp/")
+
         user.first_name = first_name
         user.last_name = last_name
-        user.email = email
         user.save()
         messages.info(request, "Profile updated successfully")
         return redirect("/profile/")
  
-    return render(request, "expenses/profile.html")
+    return render(request, "expenses/profile.html", {
+        "profile_email": profile_email,
+        "is_social_only": is_social_only,
+        "can_change_password": not is_social_only and user.has_usable_password(),
+    })
  
  
 @login_required(login_url="/login/")
 def change_password_view(request):
     if request.method == "POST":
         user = request.user
+        if _is_social_only_user(user) or not user.has_usable_password():
+            messages.error(request, "Password changes are unavailable for accounts signed in through a social provider.")
+            return redirect("/profile/")
         current_password = request.POST.get("current_password")
         new_password = request.POST.get("new_password")
         confirm_password = request.POST.get("confirm_password")
@@ -589,14 +637,93 @@ def change_password_view(request):
             messages.error(request, "New passwords do not match")
             return redirect("/profile/")
  
-        user.set_password(new_password)
-        user.save()
-        # Re-authenticate so the user isn't logged out after changing their password
-        login(request, user,backend='django.contrib.auth.backends.ModelBackend')
-        messages.info(request, "Password updated successfully")
-        return redirect("/profile/")
+        if not user.email:
+            messages.error(request, "Add and verify an email address before changing your password.")
+            return redirect("/profile/")
+
+        change = {
+            "user_id": user.id, "kind": "password", "email": user.email,
+            "password_hash": make_password(new_password),
+        }
+        if not _begin_profile_change_otp(request, change):
+            messages.error(request, "We could not send a verification code. Your password was not changed.")
+            return redirect("/profile/")
+        messages.info(request, "Enter the verification code sent to your email address.")
+        return redirect("/profile/verify-otp/")
  
     return redirect("/profile/")
+
+
+@login_required(login_url="/login/")
+def verify_profile_change_otp(request):
+    change = request.session.get("profile_change")
+    if not change or change.get("user_id") != request.user.id:
+        messages.error(request, "There is no pending profile change to verify.")
+        return redirect("/profile/")
+
+    if request.method == "POST":
+        created_at_str = request.session.get("profile_change_otp_created_at")
+        try:
+            created_at = timezone.datetime.fromisoformat(created_at_str)
+        except (TypeError, ValueError):
+            _clear_profile_change_otp(request)
+            messages.error(request, "Verification session expired. Please try again.")
+            return redirect("/profile/")
+        if timezone.now() > created_at + PROFILE_OTP_LIFETIME:
+            _clear_profile_change_otp(request)
+            messages.error(request, "Verification code expired. Please submit the change again.")
+            return redirect("/profile/")
+
+        entered_otp = request.POST.get("otp", "")
+        stored_otp = request.session.get("profile_change_otp", "")
+        if not secrets.compare_digest(entered_otp, stored_otp):
+            messages.error(request, "Invalid verification code. Try again.")
+            return redirect("/profile/verify-otp/")
+
+        user = request.user
+        if change["kind"] == "email":
+            if User.objects.filter(email=change["email"]).exclude(id=user.id).exists():
+                _clear_profile_change_otp(request)
+                messages.error(request, "That email is already in use by another account.")
+                return redirect("/profile/")
+            user.first_name = change["first_name"]
+            user.last_name = change["last_name"]
+            user.email = change["email"]
+            success_message = "Email address updated successfully."
+        elif change["kind"] == "password":
+            user.password = change["password_hash"]
+            success_message = "Password updated successfully."
+        else:
+            _clear_profile_change_otp(request)
+            messages.error(request, "Invalid profile change request.")
+            return redirect("/profile/")
+
+        user.save()
+        if change["kind"] == "password":
+            update_session_auth_hash(request, user)
+        _clear_profile_change_otp(request)
+        messages.success(request, success_message)
+        return redirect("/profile/")
+
+    return render(request, "expenses/verify_otp.html", {
+        "otp_heading": "Confirm account change",
+        "otp_message": "Enter the 6-digit verification code we sent to your email before this change is applied.",
+        "otp_resend_url": reverse("resend_profile_otp"),
+        "otp_back_url": reverse("profile"),
+        "otp_back_label": "Back to profile",
+    })
+
+
+@login_required(login_url="/login/")
+def resend_profile_change_otp(request):
+    change = request.session.get("profile_change")
+    if request.method != "POST" or not change or change.get("user_id") != request.user.id:
+        return redirect("/profile/")
+    if _begin_profile_change_otp(request, change):
+        messages.info(request, "A new verification code has been sent.")
+    else:
+        messages.error(request, "We could not send a new verification code. Please try again.")
+    return redirect("/profile/verify-otp/")
 
 from io import BytesIO
 from datetime import timedelta
