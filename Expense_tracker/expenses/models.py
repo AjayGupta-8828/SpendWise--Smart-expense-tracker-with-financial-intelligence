@@ -24,8 +24,11 @@ class Transactions(models.Model):
     types=models.CharField(
         max_length=10,choices=type_choices,default="Income")
     
+    # Income transactions may use a user-defined "Other" category.
+    # Choices remain useful for the standard expense categories, but are not a
+    # database constraint, so custom income labels can be stored safely.
     category = models.CharField(
-        max_length=20,choices=category_choices,default="Salary")
+        max_length=100, choices=category_choices, default="Salary")
     date = models.DateField(default=timezone.now)
     created_at= models.DateTimeField(auto_now_add=True)
 
