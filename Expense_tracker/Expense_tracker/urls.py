@@ -39,6 +39,8 @@ urlpatterns = [
     path('resend-otp/', resend_otp, name='resend_otp'),
     path("profile/",profile_view,name="profile"),
     path("profile/change-password/",change_password_view,name="change_password"),
+    path("profile/verify-otp/", verify_profile_change_otp, name="verify_profile_otp"),
+    path("profile/resend-otp/", resend_profile_change_otp, name="resend_profile_otp"),
     path('export/csv/',export_transactions_csv, name='export_transactions_csv'),
     path('financial-intelligence/', include('financial_ai.urls')),
 ]
