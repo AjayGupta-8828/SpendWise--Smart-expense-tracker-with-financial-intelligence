@@ -318,8 +318,8 @@
 
     <div class="otp-icon"><i class="bi bi-envelope-check"></i></div>
 
-    <h1 class="greeting">Check your inbox</h1>
-    <p class="greeting-sub">We've sent a 6-digit verification code to your email. Enter it below to activate your account.</p>
+    <h1 class="greeting">{{ otp_heading|default:"Check your inbox" }}</h1>
+    <p class="greeting-sub">{{ otp_message|default:"We've sent a 6-digit verification code to your email. Enter it below to activate your account." }}</p>
 
     {% if messages %}
       {% for message in messages %}
@@ -351,7 +351,7 @@
 
     <div class="resend-row">
       Didn't get the code?
-      <form method="post" action="{% url 'resend_otp' %}" style="display:inline;">
+      <form method="post" action="{{ otp_resend_url|default:'/resend-otp/' }}" style="display:inline;">
         {% csrf_token %}
         <button type="submit" class="resend-btn">Resend code</button>
       </form>
