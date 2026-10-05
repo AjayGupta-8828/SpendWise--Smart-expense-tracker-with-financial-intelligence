@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <body style="margin:0;padding:24px;background:#f1f5f9;font-family:Arial,sans-serif;color:#1e293b;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 24px rgba(15,23,42,.10);">
+        <tr><td style="padding:28px 32px;background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;">
+          <div style="font-size:13px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;opacity:.85;">SpendWise</div>
+          <div style="margin-top:8px;font-size:26px;font-weight:bold;">Budget alert</div>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <p style="margin:0 0 14px;font-size:16px;">Hi {{ user_name }},</p>
+          <p style="margin:0 0 24px;line-height:1.6;color:#475569;">Your spending in <strong>{{ category }}</strong> has exceeded the budget you set for this month.</p>
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;"><tr>
+            <td style="padding:20px;">
+              <div style="font-size:12px;color:#9a3412;text-transform:uppercase;font-weight:bold;letter-spacing:.7px;">Amount spent</div>
+              <div style="margin:5px 0 15px;font-size:28px;font-weight:bold;color:#c2410c;">₹{{ amount_spent|floatformat:2 }}</div>
+              <div style="font-size:14px;color:#7c2d12;">Budget limit: <strong>₹{{ limit|floatformat:2 }}</strong></div>
+            </td>
+          </tr></table>
+          <p style="margin:24px 0 0;font-size:14px;line-height:1.5;color:#64748b;">Review your upcoming purchases or update your budget in SpendWise to stay on track.</p>
+        </td></tr>
+        <tr><td style="padding:18px 32px;background:#f8fafc;color:#94a3b8;font-size:12px;text-align:center;">This is an automated SpendWise budget notification.</td></tr>
+      </table>
+    </td></tr></table>
+  </body>
+</html>
