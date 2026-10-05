@@ -258,6 +258,16 @@
         border-top: 1px solid var(--border);
       }
 
+      .transaction-toast-stack{ position:fixed; top:5.5rem; right:1rem; z-index:1080; width:min(360px,calc(100vw - 2rem)); }
+      .transaction-toast{ padding:.85rem 1rem; margin-bottom:.6rem; border-radius:10px; box-shadow:0 12px 28px rgba(15,23,42,.20); font-weight:600; animation:toastIn .25s ease; }
+      .transaction-toast.error{ background:#FEE2E2; border-left:4px solid #DC2626; color:#991B1B; }
+      .transaction-toast.warning{ background:#FEF3C7; border-left:4px solid #D97706; color:#92400E; }
+      .transaction-toast.success{ background:#DCFCE7; border-left:4px solid #16A34A; color:#166534; }
+      .transaction-toast.info{ background:#DBEAFE; border-left:4px solid #2563EB; color:#1E40AF; }
+      .transaction-toast.leaving{ animation:toastOut .2s ease forwards; }
+      @keyframes toastIn{ from{opacity:0;transform:translateX(24px)} to{opacity:1;transform:translateX(0)} }
+      @keyframes toastOut{ from{opacity:1;transform:translateX(0)} to{opacity:0;transform:translateX(24px)} }
+
       .btn{ border-radius: 8px; font-weight: 500; }
       .btn-primary{ background: var(--primary); border-color: var(--primary); }
       .btn-primary:hover{ background: #1D4ED8; border-color: #1D4ED8; }
@@ -344,16 +354,13 @@
                 <span id="categoryDot"></span>Category
               </label>
               <select class="form-select" id="category" name="category" required>
-                <option value="Salary" {% if task.category == "Salary" %}selected{% endif %}>Salary</option>
-                <option value="Food" {% if task.category == "Food" %}selected{% endif %}>Food</option>
-                <option value="Groceries" {% if task.category == "Groceries" %}selected{% endif %}>Groceries</option>
-                <option value="Travel" {% if task.category == "Travel" %}selected{% endif %}>Travel</option>
-                <option value="Shopping" {% if task.category == "Shopping" %}selected{% endif %}>Shopping</option>
-                <option value="Bills" {% if task.category == "Bills" %}selected{% endif %}>Bills</option>
-                <option value="Entertainment" {% if task.category == "Entertainment" %}selected{% endif %}>Entertainment</option>
-                <option value="Other" {% if task.category == "Other" %}selected{% endif %}>Other</option>
+                <option value="{{ task.category }}">{{ task.category }}</option>
               </select>
             </div>
+          </div>
+          <div class="mb-field" id="customCategoryField" hidden>
+            <label class="form-label" for="custom_category">Custom income category</label>
+            <input type="text" class="form-control" id="custom_category" name="custom_category" maxlength="100" placeholder="e.g. Freelance work">
           </div>
 
           <div class="form-actions">
@@ -365,6 +372,16 @@
 
         </form>
       </div>
+
+      {% if messages %}
+        <div class="transaction-toast-stack" aria-live="polite">
+          {% for message in messages %}
+            <div class="transaction-toast {% if 'error' in message.tags %}error{% elif 'warning' in message.tags %}warning{% elif 'success' in message.tags %}success{% else %}info{% endif %}" role="alert">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
 
     </div>
 
@@ -413,8 +430,41 @@
       function updateCategoryDot() {
         categoryDot.style.background = categoryColors[categorySelect.value] || "var(--cat-other)";
       }
-      categorySelect.addEventListener("change", updateCategoryDot);
-      updateCategoryDot();
+      const typeSelect = document.getElementById("types");
+      const customCategoryField = document.getElementById("customCategoryField");
+      const customCategoryInput = document.getElementById("custom_category");
+      const categories = {
+        Income: ["Salary", "Other"],
+        Expense: ["Food", "Groceries", "Travel", "Shopping", "Bills", "Entertainment", "Other"]
+      };
+      const existingCategory = "{{ task.category|escapejs }}";
+      let customIncomeFromExisting = typeSelect.value === "Income" && !categories.Income.includes(existingCategory);
+      function refreshCategories() {
+        const isCustomIncome = customIncomeFromExisting && typeSelect.value === "Income";
+        const selected = categorySelect.value;
+        categorySelect.innerHTML = categories[typeSelect.value]
+          .map(category => `<option value="${category}">${category}</option>`).join("");
+        if (isCustomIncome) {
+          categorySelect.value = "Other";
+          customCategoryInput.value = existingCategory;
+          customIncomeFromExisting = false;
+        } else {
+          categorySelect.value = categories[typeSelect.value].includes(selected) ? selected : categories[typeSelect.value][0];
+        }
+        const showCustom = typeSelect.value === "Income" && categorySelect.value === "Other";
+        customCategoryField.hidden = !showCustom;
+        customCategoryInput.required = showCustom;
+        updateCategoryDot();
+      }
+      typeSelect.addEventListener("change", refreshCategories);
+      categorySelect.addEventListener("change", refreshCategories);
+      refreshCategories();
+      document.querySelectorAll(".transaction-toast").forEach((toast) => {
+        setTimeout(() => {
+          toast.classList.add("leaving");
+          setTimeout(() => toast.remove(), 200);
+        }, 5000);
+      });
     </script>
 
   </body>
