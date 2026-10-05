@@ -57,3 +57,19 @@ def send_otp_email(user_email, user_name, otp_code):
     })
 
     return _send_email(user_email, subject, text_content, html_content)
+
+
+def send_budget_alert_email(user_email, user_name, category, amount_spent, limit):
+    """Notify a user once an expense moves a category over its monthly budget."""
+    subject = f"Budget exceeded: {category}"
+    text_content = (
+        f"Hi {user_name or 'there'}, your {category} spending is now "
+        f"₹{amount_spent:,.2f}, above your ₹{limit:,.2f} budget."
+    )
+    html_content = render_to_string("emails/budget_alert.html", {
+        "user_name": user_name or "there",
+        "category": category,
+        "amount_spent": amount_spent,
+        "limit": limit,
+    })
+    return _send_email(user_email, subject, text_content, html_content)
