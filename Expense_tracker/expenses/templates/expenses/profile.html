@@ -53,16 +53,6 @@
 {% block content %}
     {{ block.super }}
 
-    {% if messages %}
-        <div class="profile-page-wrap pb-0">
-            {% for message in messages %}
-                <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}success{% endif %} mt-3 mb-0">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <div class="profile-page-wrap">
         <div class="page-heading">Profile</div>
 
@@ -83,7 +73,7 @@
                 <div class="card p-3">
                     <h6 class="fw-bold mb-3" style="font-family:'Poppins',sans-serif;">Account Info</h6>
                     <p class="mb-2 small"><strong>Username:</strong> {{ request.user.username }}</p>
-                    <p class="mb-2 small"><strong>Email:</strong> {{ request.user.email|default:"Not set" }}</p>
+                    <p class="mb-2 small"><strong>Email:</strong> {{ profile_email|default:"Not set" }}</p>
                     <p class="mb-0 small"><strong>Joined:</strong> {{ request.user.date_joined|date:"F Y" }}</p>
                 </div>
             </div>
@@ -108,7 +98,10 @@
                             <div class="col-md-12">
                                 <label class="form-label" for="email">Email Address</label>
                                 <input type="email" class="form-control" id="email" name="email"
-                                       value="{{ request.user.email }}">
+                                       value="{{ profile_email }}" {% if is_social_only %}readonly{% endif %}>
+                                {% if is_social_only %}
+                                    <div class="form-text">This email is managed by your social login provider.</div>
+                                {% endif %}
                             </div>
                         </div>
                         <button type="submit" class="btn btn-sm mt-3" style="background: var(--btn-add); color:#fff;">
@@ -117,6 +110,7 @@
                     </form>
                 </div>
 
+                {% if can_change_password %}
                 <div class="card p-4 mt-3">
                     <h6 class="fw-bold mb-3" style="font-family:'Poppins',sans-serif;">Change Password</h6>
                     <form method="POST" action="/profile/change-password/">
@@ -140,6 +134,7 @@
                         </button>
                     </form>
                 </div>
+                {% endif %}
             </div>
 
         </div>
