@@ -153,6 +153,13 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 SENDGRID_API_KEY = config("SENDGRID_API_KEY", default="")
 DEFAULT_FROM_EMAIL = config("Email", default="")
 SOCIALACCOUNT_LOGIN_ON_GET = True # To skip the default confirmation page and redirect to google email login dashboard
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        # Explicitly request the claim used to populate User.email and the
+        # allauth SocialAccount record for Google sign-ins.
+        "SCOPE": ["profile", "email"],
+    },
+}
 
 # Groq is optional. The Financial Intelligence page uses rule-based insights
 # when this key is not configured or the API is unavailable.
