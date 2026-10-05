@@ -1,19 +1,107 @@
 import random
+import secrets
+from decimal import Decimal, InvalidOperation
 from urllib import request
 from django.utils import timezone
-from django.shortcuts import render,redirect
+from django.utils.dateparse import parse_date
+from django.shortcuts import render,redirect, get_object_or_404
 from django.contrib.auth import authenticate, login,logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.hashers import make_password
+from django.db import transaction as db_transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.contrib import messages
+from django.urls import reverse
+from allauth.account.models import EmailAddress
+from allauth.socialaccount.models import SocialAccount
 from .models import Transactions,Budget
 from django.db.models.functions import ExtractMonth
 from django.utils import timezone
 from datetime import timedelta
-from .emails import send_welcome_email, send_otp_email
+from .emails import send_welcome_email, send_otp_email, send_budget_alert_email
 from financial_ai.services import calculate_financial_health
+
+EXPENSE_CATEGORIES = {"Food", "Groceries", "Travel", "Shopping", "Bills", "Entertainment", "Other"}
+INCOME_CATEGORIES = {"Salary", "Other"}
+
+
+def _transaction_data(request, existing=None):
+    """Validate form data and return values safe to save, or an error message."""
+    title = request.POST.get("title", "").strip()
+    types = request.POST.get("types")
+    category = request.POST.get("category", "").strip()
+    custom_category = request.POST.get("custom_category", "").strip()
+    date_value = request.POST.get("date")
+    date = parse_date(date_value) if date_value else None
+    try:
+        amount = Decimal(request.POST.get("amount", ""))
+    except (InvalidOperation, TypeError):
+        return None, "Enter a valid transaction amount."
+
+    if not title or types not in {"Income", "Expense"} or amount <= 0:
+        return None, "Please provide a title, a valid transaction type, and an amount greater than zero."
+    if date_value and not date:
+        return None, "Enter a valid transaction date."
+    if types == "Income":
+        if category not in INCOME_CATEGORIES:
+            return None, "Income can only use Salary or Other as its category."
+        if category == "Other":
+            if not custom_category:
+                return None, "Enter a custom category for Other income."
+            if len(custom_category) > 100:
+                return None, "Custom income categories must be 100 characters or fewer."
+            category = custom_category
+    elif category not in EXPENSE_CATEGORIES:
+        return None, "Choose one of the available expense categories."
+
+    return {
+        "title": title, "amount": amount, "types": types,
+        "category": category, "date": date or None,
+    }, None
+
+
+def _can_afford_transaction(user, values, existing=None):
+    """Ensure the resulting lifetime expenses never exceed the user's income."""
+    transactions = Transactions.objects.filter(user=user)
+    if existing:
+        transactions = transactions.exclude(pk=existing.pk)
+    totals = transactions.values("types").annotate(total=Sum("amount"))
+    amounts = {item["types"]: item["total"] for item in totals}
+    income = amounts.get("Income", Decimal("0"))
+    expense = amounts.get("Expense", Decimal("0"))
+    if values["types"] == "Income":
+        income += values["amount"]
+    else:
+        expense += values["amount"]
+    if income == 0:
+        return False, "Add income before recording an expense."
+    if expense > income:
+        return False, "This expense would exceed your available income. Add income or reduce the expense amount."
+    return True, None
+
+
+def _budget_crossing(user, values, existing=None):
+    """Return the monthly budget and projected spend only when it newly crosses."""
+    if values["types"] != "Expense":
+        return None
+    entry_date = values["date"] or (existing.date if existing else timezone.localdate())
+    budget = Budget.objects.filter(user=user, category=values["category"]).first()
+    if not budget:
+        return None
+    monthly_expenses = Transactions.objects.filter(
+        user=user, types="Expense", category=values["category"],
+        date__year=entry_date.year, date__month=entry_date.month,
+    )
+    if existing:
+        monthly_expenses = monthly_expenses.exclude(pk=existing.pk)
+    prior_spent = monthly_expenses.aggregate(total=Sum("amount"))["total"] or Decimal("0")
+    projected_spent = prior_spent + values["amount"]
+    if prior_spent <= budget.limit < projected_spent:
+        return budget, projected_spent
+    return None
 @login_required(login_url="/login/")
 @login_required(login_url="/login/")
 def mainpage(request):
@@ -151,6 +239,11 @@ def mainpage(request):
             user=request.user,
             types="Expense",
             date__year=today.year
+    edit_budget = None
+    if request.GET.get("edit_budget"):
+        edit_budget = get_object_or_404(
+            Budget, user=request.user, pk=request.GET["edit_budget"]
+        )
         )
         .annotate(month=ExtractMonth("date"))
         .values("month")
@@ -171,8 +264,10 @@ def mainpage(request):
 
     for item in expense_queryset:
         expense_data[item["month"] - 1] = float(item["total"])
+            "edit_budget": edit_budget,
 
     health_preview = calculate_financial_health(request.user)
+@login_required(login_url="/login/")
 
     return render(
         request,
@@ -195,24 +290,38 @@ def mainpage(request):
             "is_new_user": is_new_user,
         },
     )
+@login_required(login_url="/login/")
 def budget_tracker(request):
     if request.method=="POST":
         category=request.POST.get("category")
         limit=request.POST.get("limit")
-        if category and limit:
+        if category not in EXPENSE_CATEGORIES:
+        try:
+            limit = Decimal(limit)
+            if limit <= 0:
+                raise InvalidOperation
+        except (InvalidOperation, TypeError):
+            messages.error(request, "Enter a budget limit greater than zero.")
+            return redirect(f"/?edit_budget={id}")
+            messages.error(request, "Choose a valid expense category for the budget.")
+        else:
+            try:
+                limit = Decimal(limit)
+                if limit <= 0:
+                    raise InvalidOperation
+            except (InvalidOperation, TypeError):
+                messages.error(request, "Enter a budget limit greater than zero.")
+                return redirect("/?modal=budget")
             Budget.objects.update_or_create(
                 user=request.user,
                 category=category,
                 defaults={"limit":limit}
             )
-        else:
-            messages.info("Please select a category and set a budget limit for it ")
-        budget = Budget.objects.filter(user=request.user)
         return redirect("/")
-    return render(request,"expenses/budget_tracker.html")
+    return redirect("/?modal=budget")
 
 def update_budget(request,id):
-    budget = Budget.objects.get(user=request.user,id=id)
+    budget = get_object_or_404(Budget, user=request.user, id=id)
     if request.method=="POST":
         
         limit=request.POST.get("limit")
@@ -220,36 +329,40 @@ def update_budget(request,id):
         budget.save()
         messages.info(request,"Budget updated successfully")
         return redirect("/")
-    return render(request,"expenses/update_budget.html",{"budget": budget})
+    return redirect(f"/?edit_budget={id}")
 
 @login_required(login_url="/login/")
 def add_transaction(request):
     if request.method=="POST":
-        data=request.POST
-        title=data.get("title")
-        amount=data.get("amount")
-        types=data.get("types")
-        category=data.get("category")
-        date=data.get("date")
-        if title and amount and types and category:
+        values, error = _transaction_data(request)
+        if error:
+            messages.error(request, error)
+            return redirect("/?modal=transaction")
+        allowed, error = _can_afford_transaction(request.user, values)
+        if not allowed:
+            messages.error(request, error)
+            return redirect("/?modal=transaction")
+        budget_alert = _budget_crossing(request.user, values)
+    edit_transaction = None
+    if request.GET.get("edit_transaction"):
+        edit_transaction = get_object_or_404(
+            Transactions, user=request.user, pk=request.GET["edit_transaction"]
+        )
+        Transactions.objects.create(user=request.user, **values)
+        if budget_alert:
+            budget, spent = budget_alert
+            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ???{spent:.2f}.")
+            if request.user.email:
+                db_transaction.on_commit(lambda: send_budget_alert_email(
+                    request.user.email, request.user.first_name or request.user.username,
+                    budget.category, spent, budget.limit,
+                ))
+        messages.success(request,"Transaction added successfully")
+        return redirect("/")
 
-            transaction = {
-                "user": request.user,
-                "title": title,
-                "amount": amount,
-                "types": types,
-                "category": category,
-            }
+    return redirect("/?modal=transaction")
 
-            if date:
-                transaction["date"] = date
-
-            Transactions.objects.create(**transaction)
-            messages.info(request,"Transaction added successfully")
-            return redirect("/add_transaction/")
-
-    return render(request,"expenses/add_transaction.html")
-
+@login_required(login_url="/login/")
 # Create your views here.
 
 
@@ -262,7 +375,7 @@ def transaction(request):
     return render(
         request,
         'expenses/transactions.html',
-        {'tasks': transactions}
+        {'tasks': transactions, 'edit_transaction': edit_transaction}
     )
 
 def delete_transaction(request,id):
@@ -273,24 +386,35 @@ def delete_transaction(request,id):
     return redirect("/transactions/")
 
 def update_transaction(request,id):
-    queryset=Transactions.objects.get(user=request.user,id=id)
+    queryset = get_object_or_404(Transactions, user=request.user, id=id)
     if request.method == "POST":
-        data=request.POST
-        title=data.get("title")
-        amount=data.get("amount")
-        types=data.get("types")
-        category=data.get("category")
-        date=data.get("date")
-        queryset.title = title
-        queryset.amount = amount
-        queryset.types = types
-        queryset.category = category
-        if date:
-            queryset.date = date
+        values, error = _transaction_data(request, queryset)
+        if error:
+            messages.error(request, error)
+            return redirect(f"/transactions/?edit_transaction={id}")
+        allowed, error = _can_afford_transaction(request.user, values, queryset)
+        if not allowed:
+            messages.error(request, error)
+            return redirect(f"/transactions/?edit_transaction={id}")
+        budget_alert = _budget_crossing(request.user, values, queryset)
+        queryset.title = values["title"]
+        queryset.amount = values["amount"]
+        queryset.types = values["types"]
+        queryset.category = values["category"]
+        if values["date"]:
+            queryset.date = values["date"]
         queryset.save()
-        messages.info(request,"Transaction updated successfully")
+        if budget_alert:
+            budget, spent = budget_alert
+            messages.warning(request, f"Your {budget.category} budget has been exceeded. Spent: ???{spent:.2f}.")
+            if request.user.email:
+                db_transaction.on_commit(lambda: send_budget_alert_email(
+                    request.user.email, request.user.first_name or request.user.username,
+                    budget.category, spent, budget.limit,
+                ))
+        messages.success(request,"Transaction updated successfully")
         return redirect("/transactions/")
-    return render(request,"expenses/update_transaction.html",{"task": queryset})
+    return redirect(f"/transactions/?edit_transaction={id}")
 
 
 
