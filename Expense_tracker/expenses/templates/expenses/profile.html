@@ -100,7 +100,7 @@
                                 <input type="email" class="form-control" id="email" name="email"
                                        value="{{ profile_email }}" {% if is_social_only %}readonly{% endif %}>
                                 {% if is_social_only %}
-                                    <div class="form-text">This email is managed by your social login provider.</div>
+                                    <div class="form-text">{% if profile_email %}This email is managed by your social login provider.{% else %}Your social login provider did not share an email address. Sign out and sign in with Google again to grant email access.{% endif %}</div>
                                 {% endif %}
                             </div>
                         </div>

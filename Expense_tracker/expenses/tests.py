@@ -115,6 +115,8 @@ class SocialProfileTests(TestCase):
         self.assertFalse(response.context["can_change_password"])
         self.assertContains(response, "social@example.com")
         self.assertNotContains(response, "Change Password")
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.email, "social@example.com")
 
     def test_social_only_user_cannot_submit_a_password_change(self):
         response = self.client.post(reverse("change_password"), {

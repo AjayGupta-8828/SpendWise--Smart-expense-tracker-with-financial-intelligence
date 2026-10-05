@@ -559,7 +559,11 @@ def _social_profile_email(user):
     if verified_email:
         return verified_email
     for account in SocialAccount.objects.filter(user=user):
-        email = account.extra_data.get("email")
+        email = (
+            account.extra_data.get("email")
+            or account.extra_data.get("emailAddress")
+            or account.extra_data.get("email_address")
+        )
         if email:
             return email
     return ""
@@ -574,6 +578,11 @@ def profile_view(request):
     user = request.user
     profile_email = _social_profile_email(user)
     is_social_only = _is_social_only_user(user)
+    # Keep the normal Django user field in sync with an email supplied by a
+    # trusted allauth provider, so the profile works consistently afterwards.
+    if profile_email and not user.email and not User.objects.filter(email__iexact=profile_email).exclude(id=user.id).exists():
+        user.email = profile_email
+        user.save(update_fields=["email"])
     if request.method == "POST":
         first_name = request.POST.get("first_name", "").strip()
         last_name = request.POST.get("last_name", "").strip()
