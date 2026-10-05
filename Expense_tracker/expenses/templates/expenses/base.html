@@ -582,28 +582,10 @@
 
             <li>
                 <a
-                    class="sidebar-link {% if request.path == '/add_transaction/' %}active{% endif %}"
-                    href="/add_transaction/">
-                    <i class="bi bi-plus-circle"></i>
-                    <span>Add Transaction</span>
-                </a>
-            </li>
-
-            <li>
-                <a
                     class="sidebar-link {% if request.path == '/transactions/' %}active{% endif %}"
                     href="/transactions/">
                     <i class="bi bi-receipt"></i>
                     <span>Transactions</span>
-                </a>
-            </li>
-
-            <li>
-                <a
-                    class="sidebar-link {% if request.path == '/budget_tracker/' %}active{% endif %}"
-                    href="/budget_tracker/">
-                    <i class="bi bi-pie-chart"></i>
-                    <span>Budget Tracker</span>
                 </a>
             </li>
 
@@ -705,7 +687,7 @@
         {% if request.user.is_authenticated %}
 
             <a
-                href="/add_transaction/"
+                href="/?modal=transaction"
                 class="btn btn-success btn-sm ms-auto me-2">
                 <i class="bi bi-plus-lg"></i>
                 <span class="add-transaction-label"> Add Transaction</span>
