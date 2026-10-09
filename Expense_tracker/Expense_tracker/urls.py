@@ -23,7 +23,8 @@ from django.conf import settings
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 urlpatterns = [
-    path("",mainpage,name="mainpage"),
+    path("", landing_page, name="landing"),
+    path("dashboard/", mainpage, name="mainpage"),
     path('accounts/', include('allauth.urls')),
     path('admin/', admin.site.urls),
     path("register/",register_user,name="register"),
