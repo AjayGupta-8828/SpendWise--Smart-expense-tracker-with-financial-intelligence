@@ -142,13 +142,14 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/dashboard/'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_DIRS = [BASE_DIR / 'static files']
 # SendGrid HTTP API settings. HTTPS avoids SMTP connection timeouts on Render.
 SENDGRID_API_KEY = config("SENDGRID_API_KEY", default="")
 DEFAULT_FROM_EMAIL = config("Email", default="")
