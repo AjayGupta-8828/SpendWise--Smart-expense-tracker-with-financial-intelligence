@@ -58,7 +58,7 @@
         --shadow-hover: 0 10px 24px rgba(0, 0, 0, 0.45);
       }
       [data-theme="dark"] .navbar{
-        background: linear-gradient(135deg, #1E3A8A, #1D4ED8) !important;
+        background: linear-gradient(135deg, #5B21B6, #7C3AED) !important;
       }
       [data-theme="dark"] .form-control,
       [data-theme="dark"] .form-select{
@@ -94,7 +94,7 @@
 
       /* ---------- Navbar ---------- */
       .navbar{
-        background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
+        background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
         border-bottom: none;
         padding: .6rem 1.25rem !important;
         position: sticky;
@@ -282,7 +282,7 @@
   <body>
 
     <nav class="navbar" id="mainNavbar">
-      <a class="navbar-brand" href="/tasks/"><i class="bi bi-list-ul"></i>All Transactions</a>
+      <a class="navbar-brand" href="{% url 'mainpage' %}"><span class="brand-mark" aria-hidden="true"><i class="bi bi-graph-up-arrow"></i></span><span class="brand-name">Spendwise</span></a>
 
       <div class="nav-actions">
         <a href="{% url 'mainpage' %}" class="btn btn-success btn-sm">
