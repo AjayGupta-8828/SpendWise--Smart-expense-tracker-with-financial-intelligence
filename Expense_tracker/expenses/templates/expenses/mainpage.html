@@ -1,12 +1,13 @@
 {% extends "expenses/base.html" %}
+{% load static %}
 {% block title %}
-Dashboard | Expense Tracker
+Dashboard | Spendwise
 {% endblock %}
 
   {% block extra_css %}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Expense Tracker</title>
+    <title>Spendwise</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,7 +126,7 @@ Dashboard | Expense Tracker
         color: var(--text-muted);
       }
       [data-theme="dark"] .navbar{
-        background: linear-gradient(135deg, #1E3A8A, #1D4ED8) !important;
+        background: linear-gradient(135deg, #5B21B6, #7C3AED) !important;
       }
       [data-theme="dark"] .empty-state i{ color: var(--border); }
 
@@ -212,7 +213,7 @@ Dashboard | Expense Tracker
 
       /* ---------- Navbar ---------- */
       .navbar{
-        background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
+        background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
         border-bottom: none;
         padding: .55rem 1.25rem !important;
         position: sticky;
@@ -882,8 +883,8 @@ Dashboard | Expense Tracker
           </button>
 
           <a class="navbar-brand" href="/">
-              <i class="bi bi-wallet2"></i>
-              Expense Tracker
+              <span class="brand-mark brand-logo" aria-hidden="true"><img src="{% static 'spendwise_logo.png' %}" alt=""></span>
+              <span class="brand-name">Spendwise</span>
           </a>
         </div>
         <a
