@@ -28,6 +28,11 @@ EXPENSE_CATEGORIES = {"Food", "Groceries", "Travel", "Shopping", "Bills", "Enter
 INCOME_CATEGORIES = {"Salary", "Other"}
 
 
+def landing_page(request):
+    """Render the public marketing page before a visitor signs in."""
+    return render(request, "expenses/landing.html")
+
+
 def _transaction_data(request, existing=None):
     """Validate form data and return values safe to save, or an error message."""
     title = request.POST.get("title", "").strip()
@@ -103,8 +108,8 @@ def _budget_crossing(user, values, existing=None):
         return budget, projected_spent
     return None
 @login_required(login_url="/login/")
-@login_required(login_url="/login/")
 def mainpage(request):
+
     today = timezone.now()
     # This flag is set once after OTP verification, then consumed here.
     is_new_user = request.session.pop("show_new_user_welcome", False)
@@ -281,14 +286,14 @@ def budget_tracker(request):
                     raise InvalidOperation
             except (InvalidOperation, TypeError):
                 messages.error(request, "Enter a budget limit greater than zero.")
-                return redirect("/?modal=budget")
+                return redirect("/dashboard/?modal=budget")
             Budget.objects.update_or_create(
                 user=request.user,
                 category=category,
                 defaults={"limit":limit}
             )
-        return redirect("/")
-    return redirect("/?modal=budget")
+        return redirect("/dashboard/")
+    return redirect("/dashboard/?modal=budget")
 
 @login_required(login_url="/login/")
 def update_budget(request,id):
@@ -302,12 +307,12 @@ def update_budget(request,id):
                 raise InvalidOperation
         except (InvalidOperation, TypeError):
             messages.error(request, "Enter a budget limit greater than zero.")
-            return redirect(f"/?edit_budget={id}")
+            return redirect(f"/dashboard/?edit_budget={id}")
         budget.limit = limit
         budget.save()
         messages.info(request,"Budget updated successfully")
-        return redirect("/")
-    return redirect(f"/?edit_budget={id}")
+        return redirect("/dashboard/")
+    return redirect(f"/dashboard/?edit_budget={id}")
 
 @login_required(login_url="/login/")
 def add_transaction(request):
@@ -315,11 +320,11 @@ def add_transaction(request):
         values, error = _transaction_data(request)
         if error:
             messages.error(request, error)
-            return redirect("/?modal=transaction")
+            return redirect("/dashboard/?modal=transaction")
         allowed, error = _can_afford_transaction(request.user, values)
         if not allowed:
             messages.error(request, error)
-            return redirect("/?modal=transaction")
+            return redirect("/dashboard/?modal=transaction")
         budget_alert = _budget_crossing(request.user, values)
         Transactions.objects.create(user=request.user, **values)
         if budget_alert:
@@ -331,9 +336,9 @@ def add_transaction(request):
                     budget.category, spent, budget.limit,
                 ))
         messages.success(request,"Transaction added successfully")
-        return redirect("/")
+        return redirect("/dashboard/")
 
-    return redirect("/?modal=transaction")
+    return redirect("/dashboard/?modal=transaction")
 
 # Create your views here.
 
@@ -472,7 +477,7 @@ def verify_otp(request):
             request.session['show_new_user_welcome'] = True
             display_name = user.first_name or user.username
             messages.success(request, f"Welcome {display_name}! Your account is ready.")
-            return redirect('/')
+            return redirect('/dashboard/')
         else:
             messages.error(request, "Invalid OTP. Try again.")
             return redirect('/verify-otp/')
@@ -521,7 +526,7 @@ def login_user(request):
             login(request,user)
             display_name = user.first_name or user.username
             messages.success(request, f"Welcome back {display_name}!")
-            return redirect("/")
+            return redirect(request.POST.get("next") or "/dashboard/")
 
     return render(request,"expenses/login.html")
 
