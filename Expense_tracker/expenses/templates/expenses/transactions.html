@@ -1,7 +1,8 @@
 {% extends "expenses/base.html" %}
+{% load static %}
 
 {% block title %}
-Add Transaction | Expense Tracker
+Transactions | Spendwise
 {% endblock %}
   
 {% block extra_css %}
@@ -61,7 +62,7 @@ Add Transaction | Expense Tracker
       }
       [data-theme="dark"] .card{ border-color: var(--border); }
       [data-theme="dark"] .navbar{
-        background: linear-gradient(135deg, #1E3A8A, #1D4ED8) !important;
+        background: linear-gradient(135deg, #5B21B6, #7C3AED) !important;
       }
       [data-theme="dark"] .empty-state i{ color: var(--border); }
 
@@ -94,7 +95,7 @@ Add Transaction | Expense Tracker
 
       /* ---------- Navbar (matches mainpage) ---------- */
       .navbar{
-        background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
+        background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
         border-bottom: none;
         padding: .55rem 1.25rem !important;
         flex-shrink: 0;
@@ -341,7 +342,7 @@ Add Transaction | Expense Tracker
         <i class="bi bi-list"></i>
       </button>
 
-      <a class="navbar-brand" href="{% url 'mainpage' %}"><i class="bi bi-wallet2"></i>Expense Tracker</a>
+      <a class="navbar-brand" href="{% url 'mainpage' %}"><span class="brand-mark brand-logo" aria-hidden="true"><img src="{% static 'spendwise_logo.png' %}" alt=""></span><span class="brand-name">Spendwise</span></a>
 
       <div class="nav-actions">
         <a href="{% url 'mainpage' %}" class="btn btn-outline-light btn-sm">
