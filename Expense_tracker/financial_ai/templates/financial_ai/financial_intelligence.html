@@ -1,6 +1,7 @@
 {% extends "expenses/base.html" %}
+{% load static %}
 
-{% block title %}Financial Intelligence | Expense Tracker{% endblock %}
+{% block title %}Financial Intelligence | Spendwise{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -51,7 +52,7 @@
     </button>
 
     <a class="navbar-brand" href="/">
-        <i class="bi bi-wallet2"></i> Expense Tracker
+        <span class="brand-mark brand-logo" aria-hidden="true"><img src="{% static 'spendwise_logo.png' %}" alt=""></span><span class="brand-name">Spendwise</span>
     </a>
 
     <a href="/transactions/" class="btn btn-outline-secondary btn-sm ms-auto me-2">
