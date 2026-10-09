@@ -1,9 +1,10 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Verify Email — Expense Tracker</title>
+  <title>Verify Email — Spendwise</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
@@ -118,6 +119,8 @@
       color: #fff;
       font-size: 1.1rem;
     }
+
+    .logo-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
 
     .logo-name {
       font-family: 'Poppins', sans-serif;
@@ -310,7 +313,7 @@
   </button>
 
   <a href="{% url 'mainpage' %}" class="logo-wrap">
-    <div class="logo-icon"><i class="bi bi-wallet2"></i></div>
+    <div class="logo-icon"><img src="{% static 'spendwise_logo.png' %}" alt="Spendwise"></div>
     <span class="logo-name">Expense<span>Tracker</span></span>
   </a>
 
