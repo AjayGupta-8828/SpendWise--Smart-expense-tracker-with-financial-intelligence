@@ -1,4 +1,5 @@
 {% extends "expenses/base.html" %}
+{% load static %}
 {% block title %}
 Add Transaction
 {% endblock %}
@@ -52,7 +53,7 @@ Add Transaction
         --shadow-hover: 0 10px 24px rgba(0, 0, 0, 0.45);
       }
       [data-theme="dark"] .navbar{
-        background: linear-gradient(135deg, #1E3A8A, #1D4ED8) !important;
+        background: linear-gradient(135deg, #5B21B6, #7C3AED) !important;
       }
       [data-theme="dark"] .form-control,
       [data-theme="dark"] .form-select{
@@ -91,7 +92,7 @@ Add Transaction
 
       /* ---------- Navbar ---------- */
       .navbar{
-        background: linear-gradient(135deg, #2563EB, #3B82F6) !important;
+        background: linear-gradient(135deg, #4F46E5, #7C3AED) !important;
         border-bottom: none;
         padding: .6rem 1.25rem !important;
         position: sticky;
@@ -275,7 +276,7 @@ Add Transaction
 </button>
 
 <a class="navbar-brand" href="{% url 'mainpage' %}">
-  <i class="bi bi-wallet2"></i> All Transactions
+  <span class="brand-mark brand-logo" aria-hidden="true"><img src="{% static 'spendwise_logo.png' %}" alt=""></span><span class="brand-name">Spendwise</span>
 </a>
 
       <div class="d-flex gap-2 ms-auto me-2">
