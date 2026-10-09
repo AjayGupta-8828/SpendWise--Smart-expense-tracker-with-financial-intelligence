@@ -39,7 +39,7 @@ def _send_email(recipient, subject, text_content, html_content):
 
 
 def send_welcome_email(user_email, user_name):
-    subject = "Welcome to Expense Tracker"
+    subject = "Welcome to Spendwise"
     text_content = f"Welcome, {user_name}! Thanks for signing up."
     html_content = render_to_string('emails/welcome.html', {
         'user_name': user_name,
@@ -49,7 +49,7 @@ def send_welcome_email(user_email, user_name):
 
 
 def send_otp_email(user_email, user_name, otp_code):
-    subject = "Your Expense Tracker Verification Code"
+    subject = "Your Spendwise Verification Code"
     text_content = f"Your OTP is {otp_code}. It expires in 10 minutes."
     html_content = render_to_string('emails/otp_email.html', {
         'user_name': user_name,
