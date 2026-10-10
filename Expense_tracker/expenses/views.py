@@ -110,7 +110,7 @@ def _budget_crossing(user, values, existing=None):
 @login_required(login_url="/login/")
 def mainpage(request):
 
-    today = timezone.now()
+    today = timezone.localdate()
     # This flag is set once after OTP verification, then consumed here.
     is_new_user = request.session.pop("show_new_user_welcome", False)
 
@@ -122,8 +122,17 @@ def mainpage(request):
     see_all = request.GET.get("see_all")
     month = request.GET.get("search_month")
 
-    # Selected month (current month by default)
-    selected_month = int(month) if month else today.month
+    # Dashboard summary cards always reflect the current calendar month.  The
+    # `search_month` value belongs to the recent-transactions table only; using
+    # it here caused the cards to show a different month while still saying
+    # "This month".
+    selected_month = today.month
+    try:
+        transaction_month = int(month) if month else None
+    except (TypeError, ValueError):
+        transaction_month = None
+    if transaction_month not in range(1, 13):
+        transaction_month = None
 
     # Dashboard Cards
     expense = Transactions.objects.filter(
@@ -184,7 +193,12 @@ def mainpage(request):
     if amount:
         queryset = queryset.filter(amount=amount)
 
-    if not see_all:
+    if transaction_month:
+        queryset = queryset.filter(
+            date__year=today.year,
+            date__month=transaction_month,
+        )
+    elif not see_all:
         queryset = queryset.filter(
             date__year=today.year,
             date__month=selected_month
